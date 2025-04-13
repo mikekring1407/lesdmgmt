@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Error - Google Sheets Data Access{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow text-center">
+            <div class="card-body py-5">
+                <h1 class="text-danger mb-4">
+                    <i class="fas fa-exclamation-circle"></i>
+                </h1>
+                <h2 class="mb-4">Oops! Something went wrong</h2>
+                
+                <p class="lead text-muted">{{ message }}</p>
+                
+                <div class="mt-5">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>Back to Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Back to Login
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

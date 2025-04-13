@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}Lead Management - Next US{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-cogs me-2"></i>Admin Dashboard</h2>
+        <nav class="nav nav-tabs mb-4">
+            <a class="nav-link" href="{{ url_for('admin') }}">
+                <i class="fas fa-users me-1"></i> Users
+            </a>
+            <a class="nav-link active" href="{{ url_for('admin_leads') }}">
+                <i class="fas fa-clipboard-list me-1"></i> Leads
+            </a>
+            <a class="nav-link" href="{{ url_for('admin_fields') }}">
+                <i class="fas fa-list-alt me-1"></i> Custom Fields
+            </a>
+            <a class="nav-link" href="{{ url_for('admin_imports') }}">
+                <i class="fas fa-file-import me-1"></i> Import/Export
+            </a>
+        </nav>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-address-card me-2"></i>Lead Management
+        </div>
+        <a href="{{ url_for('add_lead') }}" class="btn btn-sm btn-success">
+            <i class="fas fa-plus me-1"></i>Add New Lead
+        </a>
+    </div>
+    <div class="card-body">
+        {% if leads %}
+            <div class="table-responsive">
+                <table id="leadsTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Company</th>
+                            <th>Status</th>
+                            <th>Source</th>
+                            <th>Created</th>
+                            <th>Assigned To</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lead in leads %}
+                            <tr>
+                                <td>{{ lead.id }}</td>
+                                <td>{{ lead.name or "-" }}</td>
+                                <td>{{ lead.email or "-" }}</td>
+                                <td>{{ lead.phone or "-" }}</td>
+                                <td>{{ lead.company or "-" }}</td>
+                                <td>
+                                    {% if lead.status == "New" %}
+                                        <span class="badge bg-info">{{ lead.status }}</span>
+                                    {% elif lead.status == "Contacted" %}
+                                        <span class="badge bg-primary">{{ lead.status }}</span>
+                                    {% elif lead.status == "Qualified" %}
+                                        <span class="badge bg-success">{{ lead.status }}</span>
+                                    {% elif lead.status == "Lost" %}
+                                        <span class="badge bg-danger">{{ lead.status }}</span>
+                                    {% elif lead.status == "Converted" %}
+                                        <span class="badge bg-warning text-dark">{{ lead.status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ lead.status or "Unknown" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ lead.source or "-" }}</td>
+                                <td>{{ lead.created_at.strftime("%Y-%m-%d") if lead.created_at else "-" }}</td>
+                                <td>
+                                    {% if lead.assigned_user %}
+                                        <span class="badge bg-success">{{ lead.assigned_user.username }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('edit_lead', lead_id=lead.id) }}" class="btn btn-primary" title="Edit Lead">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{{ url_for('assign_lead_route', lead_id=lead.id) }}" class="btn btn-info" title="Assign Lead">
+                                            <i class="fas fa-user-tag"></i>
+                                        </a>
+                                        <button type="button" 
+                                                class="btn btn-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteLeadModal" 
+                                                data-lead-id="{{ lead.id }}"
+                                                data-lead-name="{{ lead.name or 'Unnamed Lead' }}"
+                                                title="Delete Lead">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>No leads found. 
+                <a href="{{ url_for('add_lead') }}" class="alert-link">Add a new lead</a> or 
+                <a href="{{ url_for('admin_imports') }}" class="alert-link">import leads</a> from a CSV file or Google Sheet.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Lead Modal -->
+<div class="modal fade" id="deleteLeadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Lead
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete lead <strong id="deleteLeadName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteLeadForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable for leads
+        $('#leadsTable').DataTable({
+            responsive: true,
+            order: [[0, 'desc']], // Sort by ID descending (newest first)
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search leads..."
+            }
+        });
+        
+        // Set up delete modal
+        $('#deleteLeadModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const leadId = button.data('lead-id');
+            const leadName = button.data('lead-name');
+            
+            $('#deleteLeadName').text(leadName);
+            $('#deleteLeadForm').attr('action', '/admin/leads/delete/' + leadId);
+        });
+    });
+</script>
+{% endblock %}

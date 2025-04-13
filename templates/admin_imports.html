@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Import/Export Data - Next US{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-cogs me-2"></i>Admin Dashboard</h2>
+        <nav class="nav nav-tabs mb-4">
+            <a class="nav-link" href="{{ url_for('admin') }}">
+                <i class="fas fa-users me-1"></i> Users
+            </a>
+            <a class="nav-link" href="{{ url_for('admin_leads') }}">
+                <i class="fas fa-clipboard-list me-1"></i> Leads
+            </a>
+            <a class="nav-link" href="{{ url_for('admin_fields') }}">
+                <i class="fas fa-list-alt me-1"></i> Custom Fields
+            </a>
+            <a class="nav-link active" href="{{ url_for('admin_imports') }}">
+                <i class="fas fa-file-import me-1"></i> Import/Export
+            </a>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- CSV Upload -->
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-file-csv me-2"></i>Import from CSV File
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Upload a CSV file with lead data. The system will try to map columns based on their headers.
+                </p>
+                
+                <form method="POST" action="{{ url_for('import_csv') }}" enctype="multipart/form-data">
+                    {{ csv_form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="{{ csv_form.file.id }}" class="form-label">CSV File</label>
+                        {{ csv_form.file(class="form-control") }}
+                        <div class="form-text">
+                            Supported columns: name, email, phone, company, status, source, notes
+                        </div>
+                        {% for error in csv_form.file.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ csv_form.has_headers(class="form-check-input") }}
+                        <label for="{{ csv_form.has_headers.id }}" class="form-check-label">
+                            File includes header row
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ csv_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Google Sheet Import -->
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-table me-2"></i>Import from Google Sheet
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Import leads directly from a Google Sheet. Make sure the Sheet is shared with the service account.
+                </p>
+                
+                <form method="POST" action="{{ url_for('import_sheet') }}">
+                    {{ sheet_form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="{{ sheet_form.spreadsheet_id.id }}" class="form-label">Google Spreadsheet ID</label>
+                        {{ sheet_form.spreadsheet_id(class="form-control", placeholder="Enter the ID from the spreadsheet URL") }}
+                        <div class="form-text">
+                            Find this in the URL: https://docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit
+                        </div>
+                        {% for error in sheet_form.spreadsheet_id.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ sheet_form.sheet_name.id }}" class="form-label">Sheet Name (Optional)</label>
+                        {{ sheet_form.sheet_name(class="form-control", placeholder="Leave blank to use the first sheet") }}
+                        <div class="form-text">
+                            Specify the exact name of the sheet tab to import from
+                        </div>
+                        {% for error in sheet_form.sheet_name.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ sheet_form.has_headers(class="form-check-input") }}
+                        <label for="{{ sheet_form.has_headers.id }}" class="form-check-label">
+                            Spreadsheet includes header row
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ sheet_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CSV Export -->
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-file-export me-2"></i>Export to CSV
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Export lead data to a CSV file. You can export all leads or filter by assigned user.
+                </p>
+                
+                <form method="POST" action="{{ url_for('export_csv') }}">
+                    {{ export_form.hidden_tag() if export_form }}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Export Type</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="export_type" id="exportAllLeads" value="all" checked>
+                            <label class="form-check-label" for="exportAllLeads">
+                                Export all leads
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="export_type" id="exportAssigned" value="assigned">
+                            <label class="form-check-label" for="exportAssigned">
+                                Export only assigned leads
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="export_type" id="exportUnassigned" value="unassigned">
+                            <label class="form-check-label" for="exportUnassigned">
+                                Export only unassigned leads
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Fields to Include</label>
+                        <select name="status_filter" class="form-select mb-2">
+                            <option value="">All Statuses</option>
+                            <option value="New">New</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Qualified">Qualified</option>
+                            <option value="Lost">Lost</option>
+                            <option value="Converted">Converted</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {% if export_form %}
+                            {{ export_form.include_all_fields(class="form-check-input", id="includeCustomFields", checked=true) }}
+                            {{ export_form.include_all_fields.label(class="form-check-label", for="includeCustomFields") }}
+                        {% else %}
+                            <input class="form-check-input" type="checkbox" name="include_all_fields" id="includeCustomFields" checked>
+                            <label class="form-check-label" for="includeCustomFields">
+                                Include all custom fields
+                            </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-download me-1"></i> Download CSV
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-dark text-white">
+        <i class="fas fa-info-circle me-2"></i>Format Guidelines
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Recommended CSV Format</h5>
+                <p>For best results, structure your CSV file with these columns:</p>
+                <pre class="bg-light p-3 rounded">
+name,email,phone,company,status,source,notes
+John Doe,john@example.com,555-123-4567,ACME Inc,New,Website,Interested in our services
+Jane Smith,jane@example.com,555-987-6543,XYZ Corp,Contacted,Referral,Follow up next week
+                </pre>
+            </div>
+            <div class="col-md-6">
+                <h5>Column Descriptions</h5>
+                <ul class="list-group">
+                    <li class="list-group-item"><strong>name</strong> - Full name of the lead (required)</li>
+                    <li class="list-group-item"><strong>email</strong> - Email address</li>
+                    <li class="list-group-item"><strong>phone</strong> - Phone number</li>
+                    <li class="list-group-item"><strong>company</strong> - Company or organization</li>
+                    <li class="list-group-item"><strong>status</strong> - Status (New, Contacted, Qualified, Lost, or Converted)</li>
+                    <li class="list-group-item"><strong>source</strong> - Where the lead came from</li>
+                    <li class="list-group-item"><strong>notes</strong> - Additional information</li>
+                </ul>
+                <p class="mt-3">Additional columns will be stored as extra data for each lead.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

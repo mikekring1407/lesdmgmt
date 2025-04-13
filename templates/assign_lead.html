@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Assign Lead - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('admin_leads') }}" class="btn btn-outline-primary me-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-user-tag me-2"></i>Assign Lead
+                        </h3>
+                        <p class="text-muted small mt-1 mb-0">
+                            Assign a lead to a user for follow-up
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-address-card me-2"></i>Lead Information
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Name:</strong></p>
+                        <p class="mb-3">{{ lead.name or "Unnamed" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Company:</strong></p>
+                        <p class="mb-3">{{ lead.company or "-" }}</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Email:</strong></p>
+                        <p class="mb-3">{{ lead.email or "-" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Phone:</strong></p>
+                        <p class="mb-3">{{ lead.phone or "-" }}</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Status:</strong></p>
+                        <p class="mb-3">
+                            {% if lead.status == "New" %}
+                                <span class="badge bg-info">{{ lead.status }}</span>
+                            {% elif lead.status == "Contacted" %}
+                                <span class="badge bg-primary">{{ lead.status }}</span>
+                            {% elif lead.status == "Qualified" %}
+                                <span class="badge bg-success">{{ lead.status }}</span>
+                            {% elif lead.status == "Lost" %}
+                                <span class="badge bg-danger">{{ lead.status }}</span>
+                            {% elif lead.status == "Converted" %}
+                                <span class="badge bg-warning text-dark">{{ lead.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ lead.status or "Unknown" }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Source:</strong></p>
+                        <p class="mb-3">{{ lead.source or "-" }}</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <p class="mb-1"><strong>Current Assignment:</strong></p>
+                        <p class="mb-3">
+                            {% if lead.assigned_user %}
+                                <span class="badge bg-success">{{ lead.assigned_user.username }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Unassigned</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-user-tag me-2"></i>Assign Lead
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.user_id.id }}" class="form-label">Select User to Assign Lead</label>
+                        {{ form.user_id(class="form-select") }}
+                        {% for error in form.user_id.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('admin_leads') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

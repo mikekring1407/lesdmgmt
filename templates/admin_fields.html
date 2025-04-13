@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+
+{% block title %}Custom Fields - Next US{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-cogs me-2"></i>Admin Dashboard</h2>
+        <nav class="nav nav-tabs mb-4">
+            <a class="nav-link" href="{{ url_for('admin') }}">
+                <i class="fas fa-users me-1"></i> Users
+            </a>
+            <a class="nav-link" href="{{ url_for('admin_leads') }}">
+                <i class="fas fa-clipboard-list me-1"></i> Leads
+            </a>
+            <a class="nav-link active" href="{{ url_for('admin_fields') }}">
+                <i class="fas fa-list-alt me-1"></i> Custom Fields
+            </a>
+            <a class="nav-link" href="{{ url_for('admin_imports') }}">
+                <i class="fas fa-file-import me-1"></i> Import/Export
+            </a>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Custom Fields List -->
+    <div class="col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-list-alt me-2"></i>Custom Fields
+                </div>
+            </div>
+            <div class="card-body">
+                {% if fields %}
+                    <div class="table-responsive">
+                        <table id="fieldsTable" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Label</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Order</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for field in fields %}
+                                    <tr>
+                                        <td>{{ field.name }}</td>
+                                        <td>{{ field.label }}</td>
+                                        <td>
+                                            {% if field.field_type == 'text' %}
+                                                <span class="badge bg-info">Text</span>
+                                            {% elif field.field_type == 'number' %}
+                                                <span class="badge bg-primary">Number</span>
+                                            {% elif field.field_type == 'date' %}
+                                                <span class="badge bg-secondary">Date</span>
+                                            {% elif field.field_type == 'select' %}
+                                                <span class="badge bg-success">Dropdown</span>
+                                            {% elif field.field_type == 'checkbox' %}
+                                                <span class="badge bg-warning text-dark">Checkbox</span>
+                                            {% elif field.field_type == 'textarea' %}
+                                                <span class="badge bg-info">Text Area</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ field.field_type }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ "Yes" if field.required else "No" }}</td>
+                                        <td>{{ field.order }}</td>
+                                        <td>
+                                            {% if field.active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('edit_field', field_id=field.id) }}" class="btn btn-primary" title="Edit Field">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-danger" 
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteFieldModal"
+                                                        data-field-id="{{ field.id }}"
+                                                        data-field-name="{{ field.label }}"
+                                                        title="Delete Field">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No custom fields defined yet. 
+                        Create your first custom field using the form.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Field Form -->
+    <div class="col-lg-5">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-{{ 'edit' if edit_mode else 'plus' }} me-2"></i>
+                {{ 'Edit' if edit_mode else 'Add' }} Custom Field
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_field', field_id=form.field_id.data) if edit_mode else url_for('admin_fields') }}">
+                    {{ form.hidden_tag() }}
+                    {{ form.field_id }}
+
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text text-muted">
+                            {{ form.name.description }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.label.label(class="form-label") }}
+                        {{ form.label(class="form-control" + (" is-invalid" if form.label.errors else "")) }}
+                        {% if form.label.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.label.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text text-muted">
+                            {{ form.label.description }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.field_type.label(class="form-label") }}
+                        {{ form.field_type(class="form-select" + (" is-invalid" if form.field_type.errors else "")) }}
+                        {% if form.field_type.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.field_type.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3" id="optionsContainer">
+                        {{ form.options.label(class="form-label") }}
+                        {{ form.options(class="form-control" + (" is-invalid" if form.options.errors else ""), rows=4) }}
+                        {% if form.options.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.options.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text text-muted">
+                            {{ form.options.description }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.order.label(class="form-label") }}
+                        {{ form.order(class="form-control" + (" is-invalid" if form.order.errors else ""), type="number") }}
+                        {% if form.order.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.order.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text text-muted">
+                            {{ form.order.description }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.required(class="form-check-input") }}
+                        {{ form.required.label(class="form-check-label") }}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.active(class="form-check-input") }}
+                        {{ form.active.label(class="form-check-label") }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        {% if edit_mode %}
+                            <a href="{{ url_for('admin_fields') }}" class="btn btn-secondary">Cancel</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Field Modal -->
+<div class="modal fade" id="deleteFieldModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Custom Field
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the custom field <strong id="deleteFieldName"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    This will remove this field from all leads and cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteFieldForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        $('#fieldsTable').DataTable({
+            responsive: true,
+            order: [[4, 'asc']], // Sort by order column ascending
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search fields..."
+            }
+        });
+        
+        // Show/hide options field based on field type
+        function toggleOptionsField() {
+            if ($("#field_type").val() === 'select') {
+                $("#optionsContainer").show();
+            } else {
+                $("#optionsContainer").hide();
+            }
+        }
+        
+        // Initialize field visibility
+        toggleOptionsField();
+        
+        // Update when field type changes
+        $("#field_type").change(toggleOptionsField);
+        
+        // Set up delete modal
+        $('#deleteFieldModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const fieldId = button.data('field-id');
+            const fieldName = button.data('field-name');
+            
+            $('#deleteFieldName').text(fieldName);
+            $('#deleteFieldForm').attr('action', '/admin/fields/delete/' + fieldId);
+        });
+    });
+</script>
+{% endblock %}

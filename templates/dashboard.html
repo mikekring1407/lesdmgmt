@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Next US{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title">
+                    <i class="fas fa-user me-2"></i>Welcome, {{ current_user.username }}
+                </h3>
+                <p class="card-text text-muted">
+                    Here are your assigned leads.
+                    {% if current_user.sheet_filter %}
+                        <span class="badge bg-info">Filtered by: {{ current_user.sheet_filter }}</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-dark">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-white">
+                <i class="fas fa-address-card me-2"></i>Your Leads
+            </h5>
+            <div>
+                <a href="{{ url_for('export_csv') }}" class="btn btn-sm btn-success me-2">
+                    <i class="fas fa-file-export me-1"></i>Export to CSV
+                </a>
+                <button id="refreshData" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if data and headers %}
+            <div class="table-responsive">
+                <table id="dataTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            {% for header in headers %}
+                                <th>{{ header }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in data %}
+                            <tr>
+                                {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Status Explanation -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">Lead Status Guide</h6>
+                            <div class="row">
+                                <div class="col-sm-6 col-md-4 col-lg-2 mb-2">
+                                    <span class="badge bg-info me-1">New</span>
+                                    Recently added lead
+                                </div>
+                                <div class="col-sm-6 col-md-4 col-lg-2 mb-2">
+                                    <span class="badge bg-primary me-1">Contacted</span>
+                                    Initial contact made
+                                </div>
+                                <div class="col-sm-6 col-md-4 col-lg-2 mb-2">
+                                    <span class="badge bg-success me-1">Qualified</span>
+                                    Qualified as potential customer
+                                </div>
+                                <div class="col-sm-6 col-md-4 col-lg-2 mb-2">
+                                    <span class="badge bg-warning text-dark me-1">Converted</span>
+                                    Became a customer
+                                </div>
+                                <div class="col-sm-6 col-md-4 col-lg-2 mb-2">
+                                    <span class="badge bg-danger me-1">Lost</span>
+                                    Opportunity lost
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                No leads are currently assigned to you. Please contact the administrator if you believe this is a mistake.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        {% if data and headers %}
+            // Initialize DataTables with search, sorting and pagination
+            $('#dataTable').DataTable({
+                responsive: true,
+                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                     '<"row"<"col-sm-12"tr>>' +
+                     '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search leads..."
+                }
+            });
+        {% endif %}
+        
+        // Refresh button functionality
+        $('#refreshData').on('click', function() {
+            location.reload();
+        });
+    });
+</script>
+{% endblock %}
