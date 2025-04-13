@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Workspace Management
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Workspace Management</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            {% include 'admin_nav.html' %}
+        </div>
+        
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{% if edit_mode %}Edit Workspace{% else %}Add New Workspace{% endif %}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_workspaces') }}">
+                        {{ form.hidden_tag() }}
+                        {{ form.workspace_id() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                            {% if form.name.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3) }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.description.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.active(class="form-check-input") }}
+                            {{ form.active.label(class="form-check-label") }}
+                        </div>
+                        
+                        <div class="d-flex">
+                            {{ form.submit(class="btn btn-primary") }}
+                            {% if edit_mode %}
+                                <a href="{{ url_for('admin_workspaces') }}" class="btn btn-secondary ms-2">Cancel</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Workspaces</h5>
+                </div>
+                <div class="card-body">
+                    {% if workspaces %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for workspace in workspaces %}
+                                        <tr>
+                                            <td>{{ workspace.name }}</td>
+                                            <td>{{ workspace.description[:50] + '...' if workspace.description and workspace.description|length > 50 else workspace.description }}</td>
+                                            <td>
+                                                {% if workspace.active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('edit_workspace', workspace_id=workspace.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#deleteWorkspaceModal{{ workspace.id }}">
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Delete Modal -->
+                                                <div class="modal fade" id="deleteWorkspaceModal{{ workspace.id }}" tabindex="-1" aria-labelledby="deleteWorkspaceModalLabel{{ workspace.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="deleteWorkspaceModalLabel{{ workspace.id }}">Confirm Delete</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete the workspace "{{ workspace.name }}"?</p>
+                                                                {% if workspace.leads.count() > 0 %}
+                                                                    <div class="alert alert-warning">
+                                                                        <strong>Warning:</strong> This workspace has {{ workspace.leads.count() }} leads associated with it. 
+                                                                        Deleting will remove the workspace association from these leads.
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <form action="{{ url_for('delete_workspace', workspace_id=workspace.id) }}" method="POST">
+                                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No workspaces defined yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

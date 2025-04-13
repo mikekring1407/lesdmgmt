@@ -4,108 +4,161 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-12">
-        <h2><i class="fas fa-cogs me-2"></i>Admin Dashboard</h2>
-        <nav class="nav nav-tabs mb-4">
-            <a class="nav-link" href="{{ url_for('admin') }}">
-                <i class="fas fa-users me-1"></i> Users
-            </a>
-            <a class="nav-link active" href="{{ url_for('admin_leads') }}">
-                <i class="fas fa-clipboard-list me-1"></i> Leads
-            </a>
-            <a class="nav-link" href="{{ url_for('admin_fields') }}">
-                <i class="fas fa-list-alt me-1"></i> Custom Fields
-            </a>
-            <a class="nav-link" href="{{ url_for('admin_imports') }}">
-                <i class="fas fa-file-import me-1"></i> Import/Export
-            </a>
-        </nav>
+    <div class="col-md-3">
+        {% include 'admin_nav.html' %}
     </div>
-</div>
+    <div class="col-md-9">
 
 <div class="card shadow">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <div>
             <i class="fas fa-address-card me-2"></i>Lead Management
         </div>
-        <a href="{{ url_for('add_lead') }}" class="btn btn-sm btn-success">
-            <i class="fas fa-plus me-1"></i>Add New Lead
-        </a>
+        <div>
+            <a href="{{ url_for('admin_workspaces') }}" class="btn btn-sm btn-info me-2">
+                <i class="fas fa-layer-group me-1"></i>Manage Workspaces
+            </a>
+            <a href="{{ url_for('add_lead') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus me-1"></i>Add New Lead
+            </a>
+        </div>
     </div>
     <div class="card-body">
         {% if leads %}
-            <div class="table-responsive">
-                <table id="leadsTable" class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Company</th>
-                            <th>Status</th>
-                            <th>Source</th>
-                            <th>Created</th>
-                            <th>Assigned To</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for lead in leads %}
+            <form id="bulkActionForm" method="POST" action="{{ url_for('bulk_lead_actions') }}">
+                <div class="mb-3 d-flex gap-2 align-items-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog me-1"></i>Bulk Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <button type="button" class="dropdown-item" data-action="export" data-bs-toggle="modal" data-bs-target="#bulkExportModal">
+                                    <i class="fas fa-file-export me-1"></i>Export Selected
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item" data-action="assign" data-bs-toggle="modal" data-bs-target="#bulkAssignModal">
+                                    <i class="fas fa-user-tag me-1"></i>Assign Selected
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item" data-action="workspace" data-bs-toggle="modal" data-bs-target="#bulkWorkspaceModal">
+                                    <i class="fas fa-layer-group me-1"></i>Set Workspace
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button type="button" class="dropdown-item text-danger" data-action="delete" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+                                    <i class="fas fa-trash-alt me-1"></i>Delete Selected
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <span id="selectedCount" class="badge bg-secondary">0 selected</span>
+                    <button type="button" id="selectAll" class="btn btn-sm btn-outline-primary">Select All</button>
+                    <button type="button" id="deselectAll" class="btn btn-sm btn-outline-secondary">Deselect All</button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table id="leadsTable" class="table table-striped table-hover">
+                        <thead>
                             <tr>
-                                <td>{{ lead.id }}</td>
-                                <td>{{ lead.name or "-" }}</td>
-                                <td>{{ lead.email or "-" }}</td>
-                                <td>{{ lead.phone or "-" }}</td>
-                                <td>{{ lead.company or "-" }}</td>
-                                <td>
-                                    {% if lead.status == "New" %}
-                                        <span class="badge bg-info">{{ lead.status }}</span>
-                                    {% elif lead.status == "Contacted" %}
-                                        <span class="badge bg-primary">{{ lead.status }}</span>
-                                    {% elif lead.status == "Qualified" %}
-                                        <span class="badge bg-success">{{ lead.status }}</span>
-                                    {% elif lead.status == "Lost" %}
-                                        <span class="badge bg-danger">{{ lead.status }}</span>
-                                    {% elif lead.status == "Converted" %}
-                                        <span class="badge bg-warning text-dark">{{ lead.status }}</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{{ lead.status or "Unknown" }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ lead.source or "-" }}</td>
-                                <td>{{ lead.created_at.strftime("%Y-%m-%d") if lead.created_at else "-" }}</td>
-                                <td>
-                                    {% if lead.assigned_user %}
-                                        <span class="badge bg-success">{{ lead.assigned_user.username }}</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Unassigned</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('edit_lead', lead_id=lead.id) }}" class="btn btn-primary" title="Edit Lead">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="{{ url_for('assign_lead_route', lead_id=lead.id) }}" class="btn btn-info" title="Assign Lead">
-                                            <i class="fas fa-user-tag"></i>
-                                        </a>
-                                        <button type="button" 
-                                                class="btn btn-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteLeadModal" 
-                                                data-lead-id="{{ lead.id }}"
-                                                data-lead-name="{{ lead.name or 'Unnamed Lead' }}"
-                                                title="Delete Lead">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
+                                <th width="40px">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="checkAllLeads">
                                     </div>
-                                </td>
+                                </th>
+                                <th>ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>City/State</th>
+                                <th>Status</th>
+                                <th>Bank</th>
+                                <th>Date</th>
+                                <th>Assigned To</th>
+                                <th>Workspace</th>
+                                <th>Actions</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {% for lead in leads %}
+                                <tr>
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input lead-checkbox" type="checkbox" name="lead_ids[]" value="{{ lead.id }}">
+                                        </div>
+                                    </td>
+                                    <td>{{ lead.id }}</td>
+                                    <td>{{ lead.first_name or "-" }}</td>
+                                    <td>{{ lead.last_name or "-" }}</td>
+                                    <td>{{ lead.email or "-" }}</td>
+                                    <td>{{ lead.phone or "-" }}</td>
+                                    <td>
+                                        {% if lead.city or lead.state %}
+                                            {{ lead.city or "" }}{% if lead.city and lead.state %}, {% endif %}{{ lead.state or "" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if lead.status == "New" %}
+                                            <span class="badge bg-info">{{ lead.status }}</span>
+                                        {% elif lead.status == "Contacted" %}
+                                            <span class="badge bg-primary">{{ lead.status }}</span>
+                                        {% elif lead.status == "Qualified" %}
+                                            <span class="badge bg-success">{{ lead.status }}</span>
+                                        {% elif lead.status == "Lost" %}
+                                            <span class="badge bg-danger">{{ lead.status }}</span>
+                                        {% elif lead.status == "Converted" %}
+                                            <span class="badge bg-warning text-dark">{{ lead.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ lead.status or "Unknown" }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ lead.bank_name or "-" }}</td>
+                                    <td>{{ lead.date_captured or "-" }}</td>
+                                    <td>
+                                        {% if lead.assigned_user %}
+                                            <span class="badge bg-success">{{ lead.assigned_user.username }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if lead.workspace %}
+                                            <span class="badge bg-info">{{ lead.workspace.name }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('edit_lead', lead_id=lead.id) }}" class="btn btn-primary" title="Edit Lead">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ url_for('assign_lead_route', lead_id=lead.id) }}" class="btn btn-info" title="Assign Lead">
+                                                <i class="fas fa-user-tag"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteLeadModal" 
+                                                    data-lead-id="{{ lead.id }}"
+                                                    data-lead-name="{{ lead.first_name }} {{ lead.last_name }}"
+                                                    title="Delete Lead">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
         {% else %}
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>No leads found. 
@@ -139,22 +192,179 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Selected Leads
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="bulkDeleteCount">0</strong> selected leads?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="bulkDeleteConfirm">Delete Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Export Modal -->
+<div class="modal fade" id="bulkExportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-export me-2"></i>Export Selected Leads
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to export <strong id="bulkExportCount">0</strong> selected leads.</p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="includeCustomFields" name="include_custom_fields" checked>
+                    <label class="form-check-label" for="includeCustomFields">
+                        Include custom fields
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="bulkExportConfirm">Export Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Assign Modal -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-tag me-2"></i>Assign Selected Leads
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to assign <strong id="bulkAssignCount">0</strong> selected leads.</p>
+                <div class="mb-3">
+                    <label for="bulkAssignUser" class="form-label">Select User:</label>
+                    <select class="form-select" id="bulkAssignUser" name="user_id">
+                        <option value="">-- Select User --</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" id="bulkAssignConfirm">Assign Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Workspace Modal -->
+<div class="modal fade" id="bulkWorkspaceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-layer-group me-2"></i>Set Workspace for Selected Leads
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to update the workspace for <strong id="bulkWorkspaceCount">0</strong> selected leads.</p>
+                <div class="mb-3">
+                    <label for="bulkWorkspaceSelect" class="form-label">Select Workspace:</label>
+                    <select class="form-select" id="bulkWorkspaceSelect" name="workspace_id">
+                        <option value="">-- No Workspace --</option>
+                        {% for workspace in workspaces %}
+                            <option value="{{ workspace.id }}">{{ workspace.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="bulkWorkspaceConfirm">Update Workspace</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     $(document).ready(function() {
         // Initialize DataTable for leads
-        $('#leadsTable').DataTable({
+        let leadsTable = $('#leadsTable').DataTable({
             responsive: true,
-            order: [[0, 'desc']], // Sort by ID descending (newest first)
+            order: [[1, 'desc']], // Sort by ID descending (newest first)
             language: {
                 search: "_INPUT_",
                 searchPlaceholder: "Search leads..."
-            }
+            },
+            columnDefs: [
+                { orderable: false, targets: 0 } // Don't allow sorting on checkbox column
+            ]
         });
         
-        // Set up delete modal
+        // Update selected count function
+        function updateSelectedCount() {
+            const selectedCount = $('.lead-checkbox:checked').length;
+            $('#selectedCount').text(selectedCount + ' selected');
+            $('#bulkDeleteCount').text(selectedCount);
+            $('#bulkExportCount').text(selectedCount);
+            $('#bulkAssignCount').text(selectedCount);
+            $('#bulkWorkspaceCount').text(selectedCount);
+            
+            // Enable/disable bulk action buttons based on selection
+            if (selectedCount > 0) {
+                $('#selectedCount').removeClass('bg-secondary').addClass('bg-primary');
+            } else {
+                $('#selectedCount').removeClass('bg-primary').addClass('bg-secondary');
+            }
+        }
+        
+        // Handle select all checkbox
+        $('#checkAllLeads').on('change', function() {
+            $('.lead-checkbox').prop('checked', $(this).prop('checked'));
+            updateSelectedCount();
+        });
+        
+        // Handle individual checkboxes
+        $('.lead-checkbox').on('change', function() {
+            updateSelectedCount();
+            // Update "select all" checkbox
+            $('#checkAllLeads').prop('checked', 
+                $('.lead-checkbox').length === $('.lead-checkbox:checked').length);
+        });
+        
+        // Select all button
+        $('#selectAll').on('click', function() {
+            $('.lead-checkbox').prop('checked', true);
+            $('#checkAllLeads').prop('checked', true);
+            updateSelectedCount();
+        });
+        
+        // Deselect all button
+        $('#deselectAll').on('click', function() {
+            $('.lead-checkbox').prop('checked', false);
+            $('#checkAllLeads').prop('checked', false);
+            updateSelectedCount();
+        });
+        
+        // Set up delete modal for single lead
         $('#deleteLeadModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
             const leadId = button.data('lead-id');
@@ -163,6 +373,67 @@
             $('#deleteLeadName').text(leadName);
             $('#deleteLeadForm').attr('action', '/admin/leads/delete/' + leadId);
         });
+        
+        // Handle bulk delete confirmation
+        $('#bulkDeleteConfirm').on('click', function() {
+            // Add hidden field to form for action type
+            $('#bulkActionForm').append('<input type="hidden" name="action" value="delete">');
+            $('#bulkActionForm').attr('action', '{{ url_for("bulk_lead_actions") }}');
+            $('#bulkActionForm').submit();
+        });
+        
+        // Handle bulk export
+        $('#bulkExportConfirm').on('click', function() {
+            // Add hidden fields for export
+            $('#bulkActionForm').append('<input type="hidden" name="action" value="export">');
+            const includeCustomFields = $('#includeCustomFields').is(':checked');
+            $('#bulkActionForm').append('<input type="hidden" name="include_custom_fields" value="' + includeCustomFields + '">');
+            
+            // Set up form for GET request and open in new tab
+            $('#bulkActionForm').attr('action', '{{ url_for("bulk_lead_export") }}');
+            $('#bulkActionForm').attr('method', 'GET');
+            $('#bulkActionForm').attr('target', '_blank');
+            $('#bulkActionForm').submit();
+            
+            // Close modal
+            $('#bulkExportModal').modal('hide');
+        });
+        
+        // Handle bulk assign
+        $('#bulkAssignConfirm').on('click', function() {
+            // Validate user selection
+            const userId = $('#bulkAssignUser').val();
+            if (!userId) {
+                alert('Please select a user to assign the leads to.');
+                return;
+            }
+            
+            // Add hidden fields
+            $('#bulkActionForm').append('<input type="hidden" name="action" value="assign">');
+            $('#bulkActionForm').append('<input type="hidden" name="user_id" value="' + userId + '">');
+            
+            // Submit form
+            $('#bulkActionForm').attr('action', '{{ url_for("bulk_lead_actions") }}');
+            $('#bulkActionForm').attr('method', 'POST');
+            $('#bulkActionForm').removeAttr('target');
+            $('#bulkActionForm').submit();
+        });
+        
+        // Handle bulk workspace update
+        $('#bulkWorkspaceConfirm').on('click', function() {
+            // Add hidden fields
+            $('#bulkActionForm').append('<input type="hidden" name="action" value="workspace">');
+            $('#bulkActionForm').append('<input type="hidden" name="workspace_id" value="' + $('#bulkWorkspaceSelect').val() + '">');
+            
+            // Submit form
+            $('#bulkActionForm').attr('action', '{{ url_for("bulk_lead_actions") }}');
+            $('#bulkActionForm').attr('method', 'POST');
+            $('#bulkActionForm').removeAttr('target');
+            $('#bulkActionForm').submit();
+        });
+        
+        // Initialize the counter
+        updateSelectedCount();
     });
 </script>
 {% endblock %}

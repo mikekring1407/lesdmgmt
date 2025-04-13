@@ -161,26 +161,73 @@ def save_lead(form):
         if form.lead_id.data:
             # Update existing lead
             lead = Lead.query.get(int(form.lead_id.data))
-            lead.name = form.name.data
+            # Standard fields
+            lead.first_name = form.first_name.data
+            lead.last_name = form.last_name.data
             lead.email = form.email.data
             lead.phone = form.phone.data
             lead.company = form.company.data
+            # Legacy field (full name) - combine first and last name if both exist
+            if form.first_name.data and form.last_name.data:
+                lead.name = f"{form.first_name.data} {form.last_name.data}"
+            else:
+                lead.name = form.name.data
+            # Location fields
+            lead.city = form.city.data
+            lead.state = form.state.data
+            lead.zipcode = form.zipcode.data
+            # Additional info
+            lead.bank_name = form.bank_name.data
+            lead.date_captured = form.date_captured.data
+            lead.time_captured = form.time_captured.data
+            # Lead status fields
             lead.status = form.status.data
             lead.source = form.source.data
             lead.notes = form.notes.data
+            # Metadata
             lead.updated_at = datetime.utcnow()
+            # If the form has workspace_id field, use it
+            if hasattr(form, 'workspace_id') and form.workspace_id.data:
+                lead.workspace_id = form.workspace_id.data
         else:
             # Create new lead
             lead = Lead(
-                name=form.name.data,
+                # Standard fields
+                first_name=form.first_name.data,
+                last_name=form.last_name.data,
                 email=form.email.data,
                 phone=form.phone.data,
                 company=form.company.data,
+                # Legacy field (full name) - combine first and last name if both exist
+                name=f"{form.first_name.data} {form.last_name.data}" if form.first_name.data and form.last_name.data else form.name.data,
+                # Location fields
+                city=form.city.data,
+                state=form.state.data,
+                zipcode=form.zipcode.data,
+                # Additional info
+                bank_name=form.bank_name.data,
+                date_captured=form.date_captured.data,
+                time_captured=form.time_captured.data,
+                # Lead status fields
                 status=form.status.data,
                 source=form.source.data,
                 notes=form.notes.data
             )
+            # If the form has workspace_id field, use it
+            if hasattr(form, 'workspace_id') and form.workspace_id.data:
+                lead.workspace_id = form.workspace_id.data
+                
             db.session.add(lead)
+            
+        # Process any custom fields
+        custom_fields = get_custom_fields(active_only=True)
+        if custom_fields:
+            for field in custom_fields:
+                field_name = field.name
+                # Check if the form has this field
+                if hasattr(form, field_name) and getattr(form, field_name).data is not None:
+                    field_value = getattr(form, field_name).data
+                    lead.set_custom_field_value(field_name, field_value)
             
         db.session.commit()
         return lead
@@ -219,8 +266,18 @@ def assign_lead(lead_id, user_id):
 def import_from_csv(file_stream, has_headers=True):
     """Import leads from a CSV file"""
     try:
-        # Read the CSV file
-        content = file_stream.read().decode('utf-8')
+        # Try to read with UTF-8 first
+        try:
+            content = file_stream.read().decode('utf-8')
+        except UnicodeDecodeError:
+            # If UTF-8 fails, try other common encodings
+            file_stream.seek(0)  # Reset the file pointer
+            try:
+                content = file_stream.read().decode('latin-1')  # Try Latin-1 (ISO-8859-1)
+            except UnicodeDecodeError:
+                file_stream.seek(0)
+                content = file_stream.read().decode('cp1252')  # Try Windows-1252
+        
         csv_data = list(csv.reader(io.StringIO(content)))
         
         if not csv_data:
@@ -254,12 +311,28 @@ def import_from_csv(file_stream, has_headers=True):
                     # Map known fields directly to model attributes
                     if header == 'name':
                         lead.name = value
+                    elif header == 'first_name' or header == 'firstname':
+                        lead.first_name = value
+                    elif header == 'last_name' or header == 'lastname':
+                        lead.last_name = value
                     elif header == 'email':
                         lead.email = value
-                    elif header == 'phone':
+                    elif header == 'phone' or header == 'phone_number' or header == 'phonenumber':
                         lead.phone = value
                     elif header == 'company':
                         lead.company = value
+                    elif header == 'city':
+                        lead.city = value
+                    elif header == 'state':
+                        lead.state = value
+                    elif header == 'zipcode' or header == 'zip' or header == 'postal_code':
+                        lead.zipcode = value
+                    elif header == 'bank_name' or header == 'bankname':
+                        lead.bank_name = value
+                    elif header == 'date_captured' or header == 'datecaptured' or header == 'date':
+                        lead.date_captured = value
+                    elif header == 'time_captured' or header == 'timecaptured' or header == 'time':
+                        lead.time_captured = value
                     elif header == 'status':
                         lead.status = value
                     elif header == 'source':
@@ -412,10 +485,13 @@ def get_lead_data_for_export(user=None, include_custom_fields=True, status_filte
     """Get lead data formatted for CSV export, optionally filtered by user assignment"""
     try:
         # Start with basic fields as headers
-        headers = ['ID', 'Name', 'Email', 'Phone', 'Company', 'Status', 'Source', 'Notes', 'Created', 'Updated', 'Assigned To']
+        headers = ['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Company', 'City', 'State', 'Zip', 
+                   'Date Captured', 'Time Captured', 'Bank Name', 'Status', 'Source', 'Notes', 
+                   'Created', 'Updated', 'Assigned To', 'Workspace']
         
         # Add custom field headers if requested
         custom_field_headers = []
+        custom_fields = []
         if include_custom_fields:
             custom_fields = get_custom_fields(active_only=True)
             custom_field_headers = [cf.label for cf in custom_fields]
@@ -449,7 +525,7 @@ def get_lead_data_for_export(user=None, include_custom_fields=True, status_filte
                 LeadAssignment.active == True
             ).subquery()
             query = query.filter(~Lead.id.in_(assigned_lead_ids))
-        elif not user.is_admin and user:
+        elif user and hasattr(user, 'is_admin') and not user.is_admin:
             # Regular user can only export their assigned leads regardless of type
             assigned_lead_ids = db.session.query(LeadAssignment.lead_id).filter(
                 LeadAssignment.user_id == user.id,
@@ -465,25 +541,40 @@ def get_lead_data_for_export(user=None, include_custom_fields=True, status_filte
         for lead in leads:
             # Get assignment info
             current_assignment = lead.current_assignment()
-            assigned_to = current_assignment.assigned_user.username if current_assignment else "Unassigned"
+            assigned_to = "Unassigned"
+            if current_assignment and hasattr(current_assignment, 'assigned_user') and current_assignment.assigned_user is not None:
+                assigned_to = current_assignment.assigned_user.username
             
             # Format dates
             created_at = lead.created_at.strftime("%Y-%m-%d %H:%M:%S") if lead.created_at else ""
             updated_at = lead.updated_at.strftime("%Y-%m-%d %H:%M:%S") if lead.updated_at else ""
             
+            # Get workspace info
+            workspace = "None"
+            if lead.workspace:
+                workspace = lead.workspace.name
+                
             # Add basic lead data
             row = [
                 lead.id,
-                lead.name or "",
+                lead.first_name or "",
+                lead.last_name or "",
                 lead.email or "",
                 lead.phone or "",
                 lead.company or "",
+                lead.city or "",
+                lead.state or "",
+                lead.zipcode or "",
+                lead.date_captured or "",
+                lead.time_captured or "",
+                lead.bank_name or "",
                 lead.status or "New",
                 lead.source or "",
                 lead.notes or "",
                 created_at,
                 updated_at,
-                assigned_to
+                assigned_to,
+                workspace
             ]
             
             # Add custom field data if requested

@@ -3,12 +3,12 @@ import logging
 import io
 import json
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from models import User, Lead, LeadAssignment, CustomField, db
-from forms import LoginForm, UserForm, LeadForm, AssignLeadForm, CSVUploadForm, ImportSheetForm, CustomFieldForm, CSVExportForm
+from models import User, Lead, LeadAssignment, CustomField, Workspace, db
+from forms import LoginForm, UserForm, LeadForm, AssignLeadForm, CSVUploadForm, ImportSheetForm, CustomFieldForm, CSVExportForm, WorkspaceForm
 from utils import (get_user_data, get_all_users, save_user, save_lead, assign_lead, 
                   import_from_csv, import_from_google_sheet, get_gspread_client, 
                   save_custom_field, get_custom_fields, get_lead_data_for_export, generate_csv_file)
@@ -177,7 +177,13 @@ def admin_leads():
     # Get all leads
     leads = Lead.query.order_by(Lead.created_at.desc()).all()
     
-    return render_template('admin_leads.html', leads=leads)
+    # Get all users for the bulk assign modal
+    users = User.query.all()
+    
+    # Get all active workspaces for the bulk workspace modal
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    
+    return render_template('admin_leads.html', leads=leads, users=users, workspaces=workspaces)
 
 @app.route('/admin/leads/add', methods=['GET', 'POST'])
 @login_required
@@ -188,10 +194,22 @@ def add_lead():
     
     form = LeadForm()
     
+    # Get active workspaces for the form dropdown
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    form.workspace_id.choices = [(0, 'No Workspace')] + [(w.id, w.name) for w in workspaces]
+    
     if form.validate_on_submit():
         try:
+            # Handle the case when "No Workspace" is selected
+            if form.workspace_id.data == 0:
+                form.workspace_id.data = None
+                
             lead = save_lead(form)
-            flash(f"Lead '{lead.name}' added successfully", "success")
+            lead_name = lead.name
+            # If name is empty but first/last name exists, use those
+            if not lead_name and (lead.first_name or lead.last_name):
+                lead_name = f"{lead.first_name or ''} {lead.last_name or ''}".strip()
+            flash(f"Lead '{lead_name}' added successfully", "success")
             return redirect(url_for('admin_leads'))
         except Exception as e:
             logger.error(f"Error adding lead: {str(e)}")
@@ -208,21 +226,47 @@ def edit_lead(lead_id):
     
     lead = Lead.query.get_or_404(lead_id)
     
+    # Create form with existing lead data
     form = LeadForm(
         lead_id=lead.id,
-        name=lead.name,
+        first_name=lead.first_name,
+        last_name=lead.last_name,
+        name=lead.name,  # Legacy field
         email=lead.email,
         phone=lead.phone,
         company=lead.company,
+        city=lead.city,
+        state=lead.state,
+        zipcode=lead.zipcode,
+        date_captured=lead.date_captured,
+        time_captured=lead.time_captured,
+        bank_name=lead.bank_name,
         status=lead.status,
         source=lead.source,
-        notes=lead.notes
+        notes=lead.notes,
+        workspace_id=lead.workspace_id
     )
+    
+    # Get active workspaces for the form dropdown
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    form.workspace_id.choices = [(0, 'No Workspace')] + [(w.id, w.name) for w in workspaces]
+    
+    # If workspace_id is None, select "No Workspace" option
+    if form.workspace_id.data is None:
+        form.workspace_id.data = 0
     
     if form.validate_on_submit():
         try:
+            # Handle the case when "No Workspace" is selected
+            if form.workspace_id.data == 0:
+                form.workspace_id.data = None
+                
             lead = save_lead(form)
-            flash(f"Lead '{lead.name}' updated successfully", "success")
+            lead_name = lead.name
+            # If name is empty but first/last name exists, use those
+            if not lead_name and (lead.first_name or lead.last_name):
+                lead_name = f"{lead.first_name or ''} {lead.last_name or ''}".strip()
+            flash(f"Lead '{lead_name}' updated successfully", "success")
             return redirect(url_for('admin_leads'))
         except Exception as e:
             logger.error(f"Error updating lead: {str(e)}")
@@ -499,6 +543,318 @@ def export_csv():
         logger.error(f"Error exporting CSV: {str(e)}")
         flash(f"Error exporting CSV: {str(e)}", "danger")
         return redirect(url_for('dashboard'))
+
+# WORKSPACE MANAGEMENT ROUTES
+@app.route('/admin/workspaces', methods=['GET', 'POST'])
+@login_required
+def admin_workspaces():
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    form = WorkspaceForm()
+    
+    if form.validate_on_submit():
+        try:
+            if form.workspace_id.data:
+                # Update existing workspace
+                workspace = Workspace.query.get_or_404(int(form.workspace_id.data))
+                workspace.name = form.name.data
+                workspace.description = form.description.data
+                workspace.active = form.active.data
+                flash(f"Workspace '{workspace.name}' updated successfully", "success")
+            else:
+                # Create new workspace
+                workspace = Workspace(
+                    name=form.name.data,
+                    description=form.description.data,
+                    active=form.active.data
+                )
+                db.session.add(workspace)
+                flash(f"Workspace '{workspace.name}' created successfully", "success")
+            
+            db.session.commit()
+            return redirect(url_for('admin_workspaces'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error saving workspace: {str(e)}")
+            flash(f"Error saving workspace: {str(e)}", "danger")
+    
+    # Get all workspaces
+    workspaces = Workspace.query.order_by(Workspace.name).all()
+    
+    return render_template('admin_workspaces.html', workspaces=workspaces, form=form, edit_mode=False)
+
+@app.route('/admin/workspaces/edit/<int:workspace_id>', methods=['GET'])
+@login_required
+def edit_workspace(workspace_id):
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    workspace = Workspace.query.get_or_404(workspace_id)
+    
+    form = WorkspaceForm(
+        workspace_id=workspace.id,
+        name=workspace.name,
+        description=workspace.description,
+        active=workspace.active
+    )
+    
+    # Get all workspaces
+    workspaces = Workspace.query.order_by(Workspace.name).all()
+    
+    return render_template('admin_workspaces.html', workspaces=workspaces, form=form, edit_mode=True)
+
+@app.route('/admin/workspaces/save', methods=['POST'])
+@login_required
+def save_workspace():
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    form = WorkspaceForm()
+    
+    if form.validate_on_submit():
+        try:
+            if form.workspace_id.data:
+                # Update existing workspace
+                workspace = Workspace.query.get_or_404(int(form.workspace_id.data))
+                workspace.name = form.name.data
+                workspace.description = form.description.data
+                workspace.active = form.active.data
+                flash(f"Workspace '{workspace.name}' updated successfully", "success")
+            else:
+                # Create new workspace
+                workspace = Workspace(
+                    name=form.name.data,
+                    description=form.description.data,
+                    active=form.active.data
+                )
+                db.session.add(workspace)
+                flash(f"Workspace '{workspace.name}' created successfully", "success")
+            
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error saving workspace: {str(e)}")
+            flash(f"Error saving workspace: {str(e)}", "danger")
+    
+    return redirect(url_for('admin_workspaces'))
+
+@app.route('/admin/workspaces/delete/<int:workspace_id>', methods=['POST'])
+@login_required
+def delete_workspace(workspace_id):
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    workspace = Workspace.query.get_or_404(workspace_id)
+    
+    try:
+        # Check if workspace has leads
+        if workspace.leads.count() > 0:
+            # Option 1: Just remove the workspace reference
+            for lead in workspace.leads.all():
+                lead.workspace_id = None
+            
+            db.session.delete(workspace)
+            db.session.commit()
+            flash(f"Workspace '{workspace.name}' deleted and all lead associations removed", "success")
+        else:
+            # No leads, just delete
+            db.session.delete(workspace)
+            db.session.commit()
+            flash(f"Workspace '{workspace.name}' deleted successfully", "success")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting workspace: {str(e)}")
+        flash(f"Error deleting workspace: {str(e)}", "danger")
+    
+    return redirect(url_for('admin_workspaces'))
+
+# BULK LEAD ACTIONS
+@app.route('/admin/leads/bulk-actions', methods=['POST'])
+@login_required
+def bulk_lead_actions():
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    # Get the selected lead IDs
+    lead_ids = request.form.getlist('lead_ids[]')
+    
+    if not lead_ids:
+        flash("No leads selected", "warning")
+        return redirect(url_for('admin_leads'))
+    
+    action = request.form.get('action')
+    
+    try:
+        if action == 'delete':
+            # Delete the selected leads
+            deleted_count = 0
+            for lead_id in lead_ids:
+                lead = Lead.query.get(lead_id)
+                if lead:
+                    db.session.delete(lead)
+                    deleted_count += 1
+            
+            db.session.commit()
+            flash(f"Successfully deleted {deleted_count} leads", "success")
+            
+        elif action == 'assign':
+            # Assign the selected leads to a user
+            user_id = request.form.get('user_id')
+            if not user_id:
+                flash("No user selected for assignment", "danger")
+                return redirect(url_for('admin_leads'))
+            
+            user = User.query.get(user_id)
+            if not user:
+                flash("Selected user not found", "danger")
+                return redirect(url_for('admin_leads'))
+                
+            # Assign each lead
+            assigned_count = 0
+            for lead_id in lead_ids:
+                try:
+                    assign_lead(lead_id, user_id)
+                    assigned_count += 1
+                except Exception as e:
+                    logger.error(f"Error assigning lead {lead_id}: {str(e)}")
+            
+            flash(f"Successfully assigned {assigned_count} leads to {user.username}", "success")
+            
+        elif action == 'workspace':
+            # Set workspace for the selected leads
+            workspace_id = request.form.get('workspace_id')
+            workspace = None
+            workspace_name = "No Workspace"
+            
+            if workspace_id:
+                workspace = Workspace.query.get(workspace_id)
+                if not workspace:
+                    flash("Selected workspace not found", "danger")
+                    return redirect(url_for('admin_leads'))
+                workspace_name = workspace.name
+            
+            # Update each lead
+            updated_count = 0
+            for lead_id in lead_ids:
+                lead = Lead.query.get(lead_id)
+                if lead:
+                    lead.workspace_id = workspace_id if workspace_id else None
+                    updated_count += 1
+            
+            db.session.commit()
+            flash(f"Successfully updated {updated_count} leads to workspace: {workspace_name}", "success")
+            
+        else:
+            flash("Invalid action", "danger")
+            
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error performing bulk action: {str(e)}")
+        flash(f"Error performing bulk action: {str(e)}", "danger")
+    
+    return redirect(url_for('admin_leads'))
+
+@app.route('/admin/leads/bulk-export', methods=['GET'])
+@login_required
+def bulk_lead_export():
+    if not current_user.is_authenticated:
+        flash("You must be logged in to export leads", "danger")
+        return redirect(url_for('login'))
+    
+    # Get the selected lead IDs
+    lead_ids = request.args.getlist('lead_ids[]')
+    
+    if not lead_ids:
+        flash("No leads selected for export", "warning")
+        return redirect(url_for('admin_leads'))
+    
+    include_custom_fields = request.args.get('include_custom_fields', 'true') == 'true'
+    
+    try:
+        # Get only the selected leads
+        leads = Lead.query.filter(Lead.id.in_(lead_ids)).all()
+        
+        # Prepare data for export
+        headers = ['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'City', 'State', 'Zip', 
+                   'Date Captured', 'Time Captured', 'Bank Name', 'Status', 'Source', 'Notes', 
+                   'Created', 'Updated', 'Assigned To', 'Workspace']
+        
+        # Add custom field headers if requested
+        custom_fields = []
+        if include_custom_fields:
+            custom_fields = get_custom_fields(active_only=True)
+            for field in custom_fields:
+                headers.append(field.label)
+        
+        # Format data for CSV export
+        rows = []
+        for lead in leads:
+            # Get assignment info
+            assigned_to = "Unassigned"
+            current_assignment = lead.current_assignment
+            if current_assignment and hasattr(current_assignment, 'assigned_user') and current_assignment.assigned_user:
+                assigned_to = current_assignment.assigned_user.username
+            
+            # Get workspace info
+            workspace = "None"
+            if lead.workspace:
+                workspace = lead.workspace.name
+            
+            # Format dates
+            created_at = lead.created_at.strftime("%Y-%m-%d %H:%M:%S") if lead.created_at else ""
+            updated_at = lead.updated_at.strftime("%Y-%m-%d %H:%M:%S") if lead.updated_at else ""
+            
+            # Add basic lead data
+            row = [
+                lead.id,
+                lead.first_name or "",
+                lead.last_name or "",
+                lead.email or "",
+                lead.phone or "",
+                lead.city or "",
+                lead.state or "",
+                lead.zipcode or "",
+                lead.date_captured or "",
+                lead.time_captured or "",
+                lead.bank_name or "",
+                lead.status or "New",
+                lead.source or "",
+                lead.notes or "",
+                created_at,
+                updated_at,
+                assigned_to,
+                workspace
+            ]
+            
+            # Add custom field data if requested
+            if include_custom_fields and custom_fields:
+                for field in custom_fields:
+                    value = lead.get_custom_field_value(field.name) or ""
+                    row.append(value)
+            
+            rows.append(row)
+        
+        # Generate CSV file
+        csv_file = generate_csv_file(headers, rows)
+        
+        # Send the file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return send_file(
+            csv_file,
+            as_attachment=True,
+            download_name=f"leads_export_{timestamp}.csv",
+            mimetype='text/csv'
+        )
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {str(e)}")
+        flash(f"Error exporting CSV: {str(e)}", "danger")
+        return redirect(url_for('admin_leads'))
 
 @app.errorhandler(404)
 def page_not_found(e):

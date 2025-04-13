@@ -46,14 +46,41 @@ class CustomField(db.Model):
         except:
             return []
 
+class Workspace(db.Model):
+    """Model to define different lead workspaces/formats"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    leads = db.relationship('Lead', back_populates='workspace', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<Workspace {self.id}: {self.name}>'
+
 class Lead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Basic contact information
+    phone = db.Column(db.String(20), nullable=True)  # Ph. Number
+    email = db.Column(db.String(100), nullable=True) # Electronic mail
+    first_name = db.Column(db.String(50), nullable=True)  # Given Name
+    last_name = db.Column(db.String(50), nullable=True)   # Last Name
+    city = db.Column(db.String(50), nullable=True)    # City
+    state = db.Column(db.String(50), nullable=True)   # State
+    zipcode = db.Column(db.String(20), nullable=True) # Zip#
+    date_captured = db.Column(db.String(20), nullable=True) # Date
+    time_captured = db.Column(db.String(20), nullable=True) # Time
+    bank_name = db.Column(db.String(100), nullable=True)   # Bnk name
+    
+    # Legacy fields maintained for backward compatibility
     name = db.Column(db.String(100), nullable=True)
-    email = db.Column(db.String(100), nullable=True)
-    phone = db.Column(db.String(20), nullable=True)
     company = db.Column(db.String(100), nullable=True)
+    
+    # Workspace assignment
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspace.id'), nullable=True)
     
     # Additional information - can be customized as needed
     status = db.Column(db.String(20), default='New')  # New, Contacted, Qualified, Lost, Converted
@@ -69,6 +96,7 @@ class Lead(db.Model):
     
     # Relationships
     assignments = db.relationship('LeadAssignment', back_populates='lead', lazy='dynamic')
+    workspace = db.relationship('Workspace', back_populates='leads')
     
     def __repr__(self):
         return f'<Lead {self.id}: {self.name or "Unnamed"}>'

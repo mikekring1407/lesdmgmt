@@ -20,12 +20,37 @@ class UserForm(FlaskForm):
     is_admin = BooleanField('Admin Access')
     submit = SubmitField('Save User')
 
+class WorkspaceForm(FlaskForm):
+    workspace_id = HiddenField('Workspace ID')
+    name = StringField('Workspace Name', validators=[DataRequired(), Length(max=100)])
+    description = TextAreaField('Description', validators=[Optional()])
+    active = BooleanField('Active', default=True)
+    submit = SubmitField('Save Workspace')
+
 class LeadForm(FlaskForm):
     lead_id = HiddenField('Lead ID')
-    name = StringField('Name', validators=[DataRequired(), Length(max=100)])
+    
+    # Contact Information
+    first_name = StringField('First Name', validators=[Optional(), Length(max=50)])
+    last_name = StringField('Last Name', validators=[Optional(), Length(max=50)])
     email = StringField('Email', validators=[Optional(), Email(), Length(max=100)])
-    phone = StringField('Phone', validators=[Optional(), Length(max=20)])
+    phone = StringField('Phone Number', validators=[Optional(), Length(max=20)])
+    
+    # Address Information
+    city = StringField('City', validators=[Optional(), Length(max=50)])
+    state = StringField('State', validators=[Optional(), Length(max=50)])
+    zipcode = StringField('Zip Code', validators=[Optional(), Length(max=20)])
+    
+    # Additional Information
+    bank_name = StringField('Bank Name', validators=[Optional(), Length(max=100)])
+    date_captured = StringField('Date Captured', validators=[Optional(), Length(max=20)])
+    time_captured = StringField('Time Captured', validators=[Optional(), Length(max=20)])
+    
+    # Legacy fields (for backward compatibility)
+    name = StringField('Full Name (Legacy)', validators=[Optional(), Length(max=100)])
     company = StringField('Company', validators=[Optional(), Length(max=100)])
+    
+    # Lead Status and Notes
     status = SelectField('Status', choices=[
         ('New', 'New'),
         ('Contacted', 'Contacted'),
@@ -35,6 +60,10 @@ class LeadForm(FlaskForm):
     ])
     source = StringField('Source', validators=[Optional(), Length(max=50)])
     notes = TextAreaField('Notes', validators=[Optional()])
+    
+    # Workspace
+    workspace_id = SelectField('Workspace', coerce=int, validators=[Optional()])
+    
     submit = SubmitField('Save Lead')
 
 class AssignLeadForm(FlaskForm):
