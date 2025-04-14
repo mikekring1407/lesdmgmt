@@ -7,8 +7,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from models import User, Lead, LeadAssignment, CustomField, Workspace, db
-from forms import LoginForm, UserForm, LeadForm, AssignLeadForm, CSVUploadForm, ImportSheetForm, CustomFieldForm, CSVExportForm, WorkspaceForm
+from models import User, Lead, LeadAssignment, CustomField, Workspace, HeaderMapping, db
+from forms import LoginForm, UserForm, LeadForm, AssignLeadForm, CSVUploadForm, ImportSheetForm, CustomFieldForm, CSVExportForm, WorkspaceForm, HeaderMappingForm
 from utils import (get_user_data, get_all_users, save_user, save_lead, assign_lead, 
                   import_from_csv, import_from_google_sheet, get_gspread_client, 
                   save_custom_field, get_custom_fields, get_lead_data_for_export, generate_csv_file)
@@ -344,6 +344,20 @@ def admin_imports():
     sheet_form = ImportSheetForm()
     export_form = CSVExportForm()
     
+    # Populate workspace and header mapping choices for both forms
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    workspace_choices = [(0, 'No Workspace')] + [(w.id, w.name) for w in workspaces]
+    
+    header_mappings = HeaderMapping.query.order_by(HeaderMapping.name).all()
+    header_mapping_choices = [(0, 'Use Workspace Default')] + [(m.id, m.name) for m in header_mappings]
+    
+    # Set choices for both forms
+    csv_form.workspace_id.choices = workspace_choices
+    csv_form.header_mapping_id.choices = header_mapping_choices
+    
+    sheet_form.workspace_id.choices = workspace_choices
+    sheet_form.header_mapping_id.choices = header_mapping_choices
+    
     return render_template('admin_imports.html', csv_form=csv_form, sheet_form=sheet_form, export_form=export_form)
 
 @app.route('/admin/imports/csv', methods=['POST'])
@@ -355,13 +369,49 @@ def import_csv():
     
     form = CSVUploadForm()
     
+    # Populate workspace and header mapping choices
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    form.workspace_id.choices = [(0, 'No Workspace')] + [(w.id, w.name) for w in workspaces]
+    
+    header_mappings = HeaderMapping.query.order_by(HeaderMapping.name).all()
+    form.header_mapping_id.choices = [(0, 'Use Workspace Default')] + [(m.id, m.name) for m in header_mappings]
+    
     if form.validate_on_submit():
         try:
             # Process uploaded file
             file = form.file.data
             has_headers = form.has_headers.data
             
-            leads_imported = import_from_csv(file, has_headers)
+            # Get selected workspace and header mapping
+            workspace_id = form.workspace_id.data if form.workspace_id.data != 0 else None
+            header_mapping_id = form.header_mapping_id.data if form.header_mapping_id.data != 0 else None
+            
+            # Determine header mapping to use
+            selected_mapping = None
+            if header_mapping_id:
+                # User selected a specific header mapping
+                selected_mapping = HeaderMapping.query.get(header_mapping_id)
+            elif workspace_id:
+                # Try to use workspace's default header mapping
+                workspace = Workspace.query.get(workspace_id)
+                if workspace and workspace.default_header_mapping_id:
+                    selected_mapping = workspace.default_header_mapping
+            
+            # Import with header mapping if available
+            if selected_mapping:
+                leads_imported = import_from_csv_with_mapping(
+                    file, 
+                    has_headers, 
+                    selected_mapping, 
+                    workspace_id=workspace_id
+                )
+            else:
+                # Fall back to standard import
+                leads_imported = import_from_csv(
+                    file, 
+                    has_headers, 
+                    workspace_id=workspace_id
+                )
             
             flash(f"Successfully imported {leads_imported} leads from CSV", "success")
         except Exception as e:
@@ -383,6 +433,13 @@ def import_sheet():
     
     form = ImportSheetForm()
     
+    # Populate workspace and header mapping choices
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    form.workspace_id.choices = [(0, 'No Workspace')] + [(w.id, w.name) for w in workspaces]
+    
+    header_mappings = HeaderMapping.query.order_by(HeaderMapping.name).all()
+    form.header_mapping_id.choices = [(0, 'Use Workspace Default')] + [(m.id, m.name) for m in header_mappings]
+    
     if form.validate_on_submit():
         try:
             # Get Google Sheets client
@@ -395,14 +452,49 @@ def import_sheet():
             sheet_name = form.sheet_name.data if form.sheet_name.data else None
             has_headers = form.has_headers.data
             
-            leads_imported = import_from_google_sheet(
+            # Get selected workspace and header mapping
+            workspace_id = form.workspace_id.data if form.workspace_id.data != 0 else None
+            header_mapping_id = form.header_mapping_id.data if form.header_mapping_id.data != 0 else None
+            
+            # Determine header mapping to use
+            selected_mapping = None
+            if header_mapping_id:
+                # User selected a specific header mapping
+                selected_mapping = HeaderMapping.query.get(header_mapping_id)
+            elif workspace_id:
+                # Try to use workspace's default header mapping
+                workspace = Workspace.query.get(workspace_id)
+                if workspace and workspace.default_header_mapping_id:
+                    selected_mapping = workspace.default_header_mapping
+            
+            # Import the data from Google Sheets
+            csv_data = get_google_sheet_as_csv(
                 client, 
                 spreadsheet_id, 
                 sheet_name,
                 has_headers
             )
             
-            flash(f"Successfully imported {leads_imported} leads from Google Sheet", "success")
+            if csv_data:
+                # Import with header mapping if available
+                if selected_mapping:
+                    leads_imported = import_from_csv_with_mapping(
+                        io.StringIO(csv_data), 
+                        has_headers, 
+                        selected_mapping, 
+                        workspace_id=workspace_id
+                    )
+                else:
+                    # Fall back to standard import
+                    leads_imported = import_from_csv(
+                        io.StringIO(csv_data), 
+                        has_headers, 
+                        workspace_id=workspace_id
+                    )
+                
+                flash(f"Successfully imported {leads_imported} leads from Google Sheet", "success")
+            else:
+                flash("No data found in the Google Sheet", "warning")
         except Exception as e:
             logger.error(f"Error importing from Google Sheet: {str(e)}")
             flash(f"Error importing from Google Sheet: {str(e)}", "danger")
@@ -554,6 +646,11 @@ def admin_workspaces():
     
     form = WorkspaceForm()
     
+    # Get all available header mappings for dropdown
+    header_mappings = HeaderMapping.query.all()
+    header_mapping_choices = [(0, 'No Default Mapping')] + [(m.id, m.name) for m in header_mappings]
+    form.default_header_mapping_id.choices = header_mapping_choices
+    
     if form.validate_on_submit():
         try:
             if form.workspace_id.data:
@@ -562,13 +659,21 @@ def admin_workspaces():
                 workspace.name = form.name.data
                 workspace.description = form.description.data
                 workspace.active = form.active.data
+                
+                # Set default header mapping
+                if form.default_header_mapping_id.data != 0:
+                    workspace.default_header_mapping_id = form.default_header_mapping_id.data
+                else:
+                    workspace.default_header_mapping_id = None
+                    
                 flash(f"Workspace '{workspace.name}' updated successfully", "success")
             else:
                 # Create new workspace
                 workspace = Workspace(
                     name=form.name.data,
                     description=form.description.data,
-                    active=form.active.data
+                    active=form.active.data,
+                    default_header_mapping_id=form.default_header_mapping_id.data if form.default_header_mapping_id.data != 0 else None
                 )
                 db.session.add(workspace)
                 flash(f"Workspace '{workspace.name}' created successfully", "success")
@@ -598,8 +703,14 @@ def edit_workspace(workspace_id):
         workspace_id=workspace.id,
         name=workspace.name,
         description=workspace.description,
-        active=workspace.active
+        active=workspace.active,
+        default_header_mapping_id=workspace.default_header_mapping_id or 0
     )
+    
+    # Get all available header mappings for dropdown
+    header_mappings = HeaderMapping.query.all()
+    header_mapping_choices = [(0, 'No Default Mapping')] + [(m.id, m.name) for m in header_mappings]
+    form.default_header_mapping_id.choices = header_mapping_choices
     
     # Get all workspaces
     workspaces = Workspace.query.order_by(Workspace.name).all()
@@ -615,6 +726,11 @@ def save_workspace():
     
     form = WorkspaceForm()
     
+    # Get all available header mappings for dropdown
+    header_mappings = HeaderMapping.query.all()
+    header_mapping_choices = [(0, 'No Default Mapping')] + [(m.id, m.name) for m in header_mappings]
+    form.default_header_mapping_id.choices = header_mapping_choices
+    
     if form.validate_on_submit():
         try:
             if form.workspace_id.data:
@@ -623,13 +739,21 @@ def save_workspace():
                 workspace.name = form.name.data
                 workspace.description = form.description.data
                 workspace.active = form.active.data
+                
+                # Set default header mapping
+                if form.default_header_mapping_id.data != 0:
+                    workspace.default_header_mapping_id = form.default_header_mapping_id.data
+                else:
+                    workspace.default_header_mapping_id = None
+                    
                 flash(f"Workspace '{workspace.name}' updated successfully", "success")
             else:
                 # Create new workspace
                 workspace = Workspace(
                     name=form.name.data,
                     description=form.description.data,
-                    active=form.active.data
+                    active=form.active.data,
+                    default_header_mapping_id=form.default_header_mapping_id.data if form.default_header_mapping_id.data != 0 else None
                 )
                 db.session.add(workspace)
                 flash(f"Workspace '{workspace.name}' created successfully", "success")
@@ -672,6 +796,180 @@ def delete_workspace(workspace_id):
         flash(f"Error deleting workspace: {str(e)}", "danger")
     
     return redirect(url_for('admin_workspaces'))
+
+# HEADER MAPPING ROUTES
+@app.route('/admin/header-mappings', methods=['GET'])
+@login_required
+def admin_header_mappings():
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    # Get all header mappings
+    mappings = HeaderMapping.query.order_by(HeaderMapping.name).all()
+    
+    return render_template('admin_header_mappings.html', mappings=mappings)
+
+@app.route('/admin/header-mappings/add', methods=['GET', 'POST'])
+@login_required
+def add_header_mapping():
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    form = HeaderMappingForm()
+    
+    # Get all workspaces for the dropdown
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    workspace_choices = [(0, 'No Workspace Association')] + [(w.id, w.name) for w in workspaces]
+    form.workspace_id.choices = workspace_choices
+    
+    if form.validate_on_submit():
+        try:
+            mapping = HeaderMapping()
+            mapping.name = form.name.data
+            mapping.description = form.description.data
+            mapping.created_by = current_user.id
+            mapping.is_default = form.is_default.data
+            
+            # Set workspace association
+            if form.workspace_id.data != 0:
+                mapping.workspace_id = form.workspace_id.data
+            else:
+                mapping.workspace_id = None
+            
+            # Set header mappings from form data
+            mapping.first_name_header = form.first_name_header.data
+            mapping.last_name_header = form.last_name_header.data
+            mapping.email_header = form.email_header.data
+            mapping.phone_header = form.phone_header.data
+            mapping.company_header = form.company_header.data
+            mapping.city_header = form.city_header.data
+            mapping.state_header = form.state_header.data
+            mapping.zipcode_header = form.zipcode_header.data
+            mapping.bank_name_header = form.bank_name_header.data
+            mapping.date_captured_header = form.date_captured_header.data
+            mapping.time_captured_header = form.time_captured_header.data
+            mapping.status_header = form.status_header.data
+            mapping.source_header = form.source_header.data
+            mapping.notes_header = form.notes_header.data
+            
+            # If this is set as default, unset other defaults
+            if mapping.is_default:
+                # Set all other mappings to not default
+                HeaderMapping.query.filter(HeaderMapping.id != mapping.id).update({'is_default': False})
+            
+            db.session.add(mapping)
+            db.session.commit()
+            
+            flash(f"Header mapping '{mapping.name}' created successfully", "success")
+            return redirect(url_for('admin_header_mappings'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating header mapping: {str(e)}")
+            flash(f"Error creating header mapping: {str(e)}", "danger")
+    
+    return render_template('header_mapping_form.html', form=form, title="Add Header Mapping")
+
+@app.route('/admin/header-mappings/edit/<int:mapping_id>', methods=['GET', 'POST'])
+@login_required
+def edit_header_mapping(mapping_id):
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    mapping = HeaderMapping.query.get_or_404(mapping_id)
+    
+    form = HeaderMappingForm(
+        mapping_id=mapping.id,
+        name=mapping.name,
+        description=mapping.description,
+        is_default=mapping.is_default,
+        workspace_id=mapping.workspace_id or 0,
+        first_name_header=mapping.first_name_header,
+        last_name_header=mapping.last_name_header,
+        email_header=mapping.email_header,
+        phone_header=mapping.phone_header,
+        company_header=mapping.company_header,
+        city_header=mapping.city_header,
+        state_header=mapping.state_header,
+        zipcode_header=mapping.zipcode_header,
+        bank_name_header=mapping.bank_name_header,
+        date_captured_header=mapping.date_captured_header,
+        time_captured_header=mapping.time_captured_header,
+        status_header=mapping.status_header,
+        source_header=mapping.source_header,
+        notes_header=mapping.notes_header
+    )
+    
+    # Get all workspaces for the dropdown
+    workspaces = Workspace.query.filter_by(active=True).order_by(Workspace.name).all()
+    workspace_choices = [(0, 'No Workspace Association')] + [(w.id, w.name) for w in workspaces]
+    form.workspace_id.choices = workspace_choices
+    
+    if form.validate_on_submit():
+        try:
+            mapping.name = form.name.data
+            mapping.description = form.description.data
+            mapping.is_default = form.is_default.data
+            
+            # Set workspace association
+            if form.workspace_id.data != 0:
+                mapping.workspace_id = form.workspace_id.data
+            else:
+                mapping.workspace_id = None
+            
+            # Update header mappings from form data
+            mapping.first_name_header = form.first_name_header.data
+            mapping.last_name_header = form.last_name_header.data
+            mapping.email_header = form.email_header.data
+            mapping.phone_header = form.phone_header.data
+            mapping.company_header = form.company_header.data
+            mapping.city_header = form.city_header.data
+            mapping.state_header = form.state_header.data
+            mapping.zipcode_header = form.zipcode_header.data
+            mapping.bank_name_header = form.bank_name_header.data
+            mapping.date_captured_header = form.date_captured_header.data
+            mapping.time_captured_header = form.time_captured_header.data
+            mapping.status_header = form.status_header.data
+            mapping.source_header = form.source_header.data
+            mapping.notes_header = form.notes_header.data
+            
+            # If this is set as default, unset other defaults
+            if mapping.is_default:
+                # Set all other mappings to not default
+                HeaderMapping.query.filter(HeaderMapping.id != mapping.id).update({'is_default': False})
+            
+            db.session.commit()
+            
+            flash(f"Header mapping '{mapping.name}' updated successfully", "success")
+            return redirect(url_for('admin_header_mappings'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating header mapping: {str(e)}")
+            flash(f"Error updating header mapping: {str(e)}", "danger")
+    
+    return render_template('header_mapping_form.html', form=form, mapping=mapping, title="Edit Header Mapping")
+
+@app.route('/admin/header-mappings/delete/<int:mapping_id>', methods=['POST'])
+@login_required
+def delete_header_mapping(mapping_id):
+    if not current_user.is_admin:
+        flash("You don't have permission to access the admin panel", "danger")
+        return redirect(url_for('dashboard'))
+    
+    mapping = HeaderMapping.query.get_or_404(mapping_id)
+    
+    try:
+        db.session.delete(mapping)
+        db.session.commit()
+        flash(f"Header mapping '{mapping.name}' deleted successfully", "success")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting header mapping: {str(e)}")
+        flash(f"Error deleting header mapping: {str(e)}", "danger")
+    
+    return redirect(url_for('admin_header_mappings'))
 
 # BULK LEAD ACTIONS
 @app.route('/admin/leads/bulk-actions', methods=['POST'])

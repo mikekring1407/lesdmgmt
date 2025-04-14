@@ -25,6 +25,8 @@ class WorkspaceForm(FlaskForm):
     name = StringField('Workspace Name', validators=[DataRequired(), Length(max=100)])
     description = TextAreaField('Description', validators=[Optional()])
     active = BooleanField('Active', default=True)
+    default_header_mapping_id = SelectField('Default Header Mapping', coerce=int, validators=[Optional()],
+                           description="Select the default header mapping for this workspace")
     submit = SubmitField('Save Workspace')
 
 class LeadForm(FlaskForm):
@@ -76,12 +78,20 @@ class CSVUploadForm(FlaskForm):
         FileAllowed(['csv'], 'CSV files only!')
     ])
     has_headers = BooleanField('File includes header row', default=True)
+    workspace_id = SelectField('Workspace', coerce=int, validators=[Optional()],
+                          description="Select a workspace to assign these leads to")
+    header_mapping_id = SelectField('Header Mapping', coerce=int, validators=[Optional()],
+                               description="Select a header mapping or use workspace default if available")
     submit = SubmitField('Upload CSV')
 
 class ImportSheetForm(FlaskForm):
     spreadsheet_id = StringField('Google Spreadsheet ID', validators=[DataRequired()])
     sheet_name = StringField('Sheet Name (leave blank for first sheet)', validators=[Optional()])
     has_headers = BooleanField('Spreadsheet includes header row', default=True)
+    workspace_id = SelectField('Workspace', coerce=int, validators=[Optional()],
+                          description="Select a workspace to assign these leads to")
+    header_mapping_id = SelectField('Header Mapping', coerce=int, validators=[Optional()],
+                               description="Select a header mapping or use workspace default if available")
     submit = SubmitField('Import from Google Sheet')
 
 class CustomFieldForm(FlaskForm):
@@ -113,3 +123,47 @@ class CustomFieldForm(FlaskForm):
 class CSVExportForm(FlaskForm):
     include_all_fields = BooleanField('Include all custom fields', default=True)
     submit = SubmitField('Export to CSV')
+
+class HeaderMappingForm(FlaskForm):
+    mapping_id = HiddenField('Mapping ID')
+    name = StringField('Mapping Name', validators=[DataRequired(), Length(max=50)],
+                     description="A name for this header mapping (e.g., 'Marketing CSV Format')")
+    description = TextAreaField('Description', validators=[Optional()],
+                              description="Optional description of this mapping")
+    
+    workspace_id = SelectField('Associated Workspace', coerce=int, validators=[Optional()],
+                             description="Assign this mapping to a specific workspace")
+    
+    # Field mappings
+    first_name_header = StringField('First Name', validators=[Optional()], 
+                                   description="Header for first name column (e.g., 'First Name', 'Given Name')")
+    last_name_header = StringField('Last Name', validators=[Optional()], 
+                                  description="Header for last name column")
+    email_header = StringField('Email', validators=[Optional()], 
+                              description="Header for email column")
+    phone_header = StringField('Phone', validators=[Optional()], 
+                              description="Header for phone column")
+    company_header = StringField('Company', validators=[Optional()], 
+                                description="Header for company column")
+    city_header = StringField('City', validators=[Optional()], 
+                             description="Header for city column")
+    state_header = StringField('State', validators=[Optional()], 
+                              description="Header for state column")
+    zipcode_header = StringField('Zip Code', validators=[Optional()], 
+                                description="Header for zip code column")
+    bank_name_header = StringField('Bank Name', validators=[Optional()], 
+                                  description="Header for bank name column")
+    date_captured_header = StringField('Date Captured', validators=[Optional()], 
+                                      description="Header for date captured column")
+    time_captured_header = StringField('Time Captured', validators=[Optional()], 
+                                      description="Header for time captured column")
+    status_header = StringField('Status', validators=[Optional()], 
+                               description="Header for status column")
+    source_header = StringField('Source', validators=[Optional()], 
+                               description="Header for source column")
+    notes_header = StringField('Notes', validators=[Optional()], 
+                              description="Header for notes column")
+    
+    is_default = BooleanField('Set as Default Mapping', default=False,
+                            description="Use this mapping by default for CSV imports")
+    submit = SubmitField('Save Header Mapping')

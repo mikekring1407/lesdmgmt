@@ -47,6 +47,21 @@
                             {% endif %}
                         </div>
                         
+                        <div class="mb-3">
+                            {{ form.default_header_mapping_id.label(class="form-label") }}
+                            {{ form.default_header_mapping_id(class="form-select") }}
+                            {% if form.default_header_mapping_id.description %}
+                                <div class="form-text">{{ form.default_header_mapping_id.description }}</div>
+                            {% endif %}
+                            {% if form.default_header_mapping_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.default_header_mapping_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
                         <div class="mb-3 form-check">
                             {{ form.active(class="form-check-input") }}
                             {{ form.active.label(class="form-check-label") }}
@@ -74,6 +89,7 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Description</th>
+                                        <th>Default Header Mapping</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -83,6 +99,13 @@
                                         <tr>
                                             <td>{{ workspace.name }}</td>
                                             <td>{{ workspace.description[:50] + '...' if workspace.description and workspace.description|length > 50 else workspace.description }}</td>
+                                            <td>
+                                                {% if workspace.default_header_mapping %}
+                                                    <span class="badge bg-info">{{ workspace.default_header_mapping.name }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">None</span>
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 {% if workspace.active %}
                                                     <span class="badge bg-success">Active</span>

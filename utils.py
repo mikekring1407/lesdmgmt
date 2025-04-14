@@ -263,7 +263,7 @@ def assign_lead(lead_id, user_id):
         logger.error(f"Error assigning lead: {str(e)}")
         raise
 
-def import_from_csv(file_stream, has_headers=True):
+def import_from_csv(file_stream, has_headers=True, workspace_id=None):
     """Import leads from a CSV file"""
     try:
         # Try to read with UTF-8 first
@@ -296,6 +296,10 @@ def import_from_csv(file_stream, has_headers=True):
                 
             # Create a lead object with basic fields
             lead = Lead()
+            
+            # Set workspace_id if provided
+            if workspace_id:
+                lead.workspace_id = workspace_id
             
             # Map CSV columns to lead fields if headers are present
             if headers:
@@ -348,18 +352,29 @@ def import_from_csv(file_stream, has_headers=True):
                     lead.extra_data = extra_data
             else:
                 # No headers, map by position with reasonable defaults
-                if len(row) > 0: lead.name = row[0]
-                if len(row) > 1: lead.email = row[1]
-                if len(row) > 2: lead.phone = row[2]
-                if len(row) > 3: lead.company = row[3]
-                if len(row) > 4: lead.status = row[4]
-                if len(row) > 5: lead.source = row[5]
-                if len(row) > 6: lead.notes = row[6]
+                if len(row) > 0: lead.first_name = row[0]
+                if len(row) > 1: lead.last_name = row[1]
+                if len(row) > 2: lead.email = row[2]
+                if len(row) > 3: lead.phone = row[3]
+                if len(row) > 4: lead.company = row[4]
+                if len(row) > 5: lead.city = row[5]
+                if len(row) > 6: lead.state = row[6]
+                if len(row) > 7: lead.zipcode = row[7]
+                if len(row) > 8: lead.bank_name = row[8]
+                if len(row) > 9: lead.date_captured = row[9]
+                if len(row) > 10: lead.time_captured = row[10]
+                if len(row) > 11: lead.status = row[11]
+                if len(row) > 12: lead.source = row[12]
+                if len(row) > 13: lead.notes = row[13]
+                
+                # Set legacy name field if first/last name are provided
+                if lead.first_name or lead.last_name:
+                    lead.name = f"{lead.first_name or ''} {lead.last_name or ''}".strip()
                 
                 # Store any remaining columns in extra_data
-                if len(row) > 7:
+                if len(row) > 14:
                     extra_data = {}
-                    for i in range(7, len(row)):
+                    for i in range(14, len(row)):
                         extra_data[f"column_{i}"] = row[i]
                     lead.extra_data = extra_data
             
@@ -379,8 +394,143 @@ def import_from_csv(file_stream, has_headers=True):
         logger.error(f"Error importing from CSV: {str(e)}")
         raise
 
-def import_from_google_sheet(client, spreadsheet_id, sheet_name=None, has_headers=True):
-    """Import leads from a Google Sheet"""
+def import_from_csv_with_mapping(file_stream, has_headers=True, header_mapping=None, workspace_id=None):
+    """Import leads from a CSV file using a header mapping"""
+    try:
+        # Try to read with UTF-8 first
+        try:
+            content = file_stream.read().decode('utf-8')
+        except UnicodeDecodeError:
+            # If UTF-8 fails, try other common encodings
+            file_stream.seek(0)  # Reset the file pointer
+            try:
+                content = file_stream.read().decode('latin-1')  # Try Latin-1 (ISO-8859-1)
+            except UnicodeDecodeError:
+                file_stream.seek(0)
+                content = file_stream.read().decode('cp1252')  # Try Windows-1252
+        
+        csv_data = list(csv.reader(io.StringIO(content)))
+        
+        if not csv_data:
+            return 0
+            
+        # Get headers if present, otherwise use column indices
+        headers = csv_data[0] if has_headers else None
+        data_rows = csv_data[1:] if has_headers else csv_data
+        
+        # If no headers, we can't use mapping, fall back to standard import
+        if not headers:
+            logger.warning("No headers found in CSV, falling back to standard import")
+            file_stream.seek(0)  # Reset to beginning of file
+            return import_from_csv(file_stream, has_headers, workspace_id)
+        
+        # Create a dictionary of header mappings for easy lookup
+        mapping_dict = header_mapping.get_mapping_dict() if header_mapping else {}
+        
+        leads_imported = 0
+        
+        for row in data_rows:
+            # Skip empty rows
+            if not any(row):
+                continue
+                
+            # Create a lead object with basic fields
+            lead = Lead()
+            
+            # Set workspace_id if provided
+            if workspace_id:
+                lead.workspace_id = workspace_id
+            
+            # Process each column using header mapping
+            extra_data = {}
+            header_to_index = {headers[i].lower(): i for i in range(len(headers))}
+            
+            # Process each field using our mapping
+            for field_name, header_variant in mapping_dict.items():
+                if not header_variant:
+                    continue
+                    
+                # Find the column index for this header
+                header_index = None
+                header_variant_lower = header_variant.lower()
+                
+                if header_variant_lower in header_to_index:
+                    header_index = header_to_index[header_variant_lower]
+                
+                if header_index is not None and header_index < len(row):
+                    value = row[header_index].strip()
+                    if value:
+                        # Set the appropriate field value
+                        if field_name == 'first_name':
+                            lead.first_name = value
+                        elif field_name == 'last_name':
+                            lead.last_name = value
+                        elif field_name == 'email':
+                            lead.email = value
+                        elif field_name == 'phone':
+                            lead.phone = value
+                        elif field_name == 'company':
+                            lead.company = value
+                        elif field_name == 'city':
+                            lead.city = value
+                        elif field_name == 'state':
+                            lead.state = value
+                        elif field_name == 'zipcode':
+                            lead.zipcode = value
+                        elif field_name == 'bank_name':
+                            lead.bank_name = value
+                        elif field_name == 'date_captured':
+                            lead.date_captured = value
+                        elif field_name == 'time_captured':
+                            lead.time_captured = value
+                        elif field_name == 'status':
+                            lead.status = value
+                        elif field_name == 'source':
+                            lead.source = value
+                        elif field_name == 'notes':
+                            lead.notes = value
+                        elif field_name.startswith('custom_field_'):
+                            # Custom field, put in extra_data
+                            custom_field_name = field_name.replace('custom_field_', '')
+                            if not lead.extra_data:
+                                lead.extra_data = {}
+                            lead.set_custom_field_value(custom_field_name, value)
+            
+            # Set legacy name field if first/last name are provided
+            if lead.first_name or lead.last_name:
+                lead.name = f"{lead.first_name or ''} {lead.last_name or ''}".strip()
+            
+            # Process any unmapped columns
+            for i, header in enumerate(headers):
+                # Skip empty values
+                if i < len(row) and row[i].strip():
+                    header_lower = header.lower()
+                    
+                    # Skip the headers we've already mapped
+                    if not any(h.lower() == header_lower for h in mapping_dict.values() if h):
+                        # Store unmapped columns in extra_data
+                        if not lead.extra_data:
+                            lead.extra_data = {}
+                        lead.extra_data[header_lower] = row[i].strip()
+            
+            # Set status to "New" if not provided
+            if not lead.status:
+                lead.status = "New"
+                
+            # Add the lead
+            db.session.add(lead)
+            leads_imported += 1
+            
+        # Commit all changes
+        db.session.commit()
+        return leads_imported
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error importing from CSV with mapping: {str(e)}")
+        raise
+
+def get_google_sheet_as_csv(client, spreadsheet_id, sheet_name=None, has_headers=True):
+    """Get data from a Google Sheet and convert it to CSV format"""
     try:
         # Open the spreadsheet
         spreadsheet = client.open_by_key(spreadsheet_id)
@@ -392,13 +542,13 @@ def import_from_google_sheet(client, spreadsheet_id, sheet_name=None, has_header
         sheet_data = worksheet.get_all_values()
         
         if not sheet_data:
-            return 0
+            return None
             
         # Get headers if present, otherwise use column indices
         headers = sheet_data[0] if has_headers else None
         data_rows = sheet_data[1:] if has_headers else sheet_data
         
-        # Use the CSV import function with the sheet data
+        # Convert to CSV
         csv_file = io.StringIO()
         csv_writer = csv.writer(csv_file)
         
@@ -407,11 +557,28 @@ def import_from_google_sheet(client, spreadsheet_id, sheet_name=None, has_header
             
         csv_writer.writerows(data_rows)
         
-        # Reset the StringIO position
+        # Reset the StringIO position and get the value
         csv_file.seek(0)
+        return csv_file.getvalue()
         
-        # Import using the CSV function
-        return import_from_csv(csv_file, has_headers)
+    except Exception as e:
+        logger.error(f"Error getting data from Google Sheet: {str(e)}")
+        raise
+
+def import_from_google_sheet(client, spreadsheet_id, sheet_name=None, has_headers=True, workspace_id=None):
+    """Import leads from a Google Sheet"""
+    try:
+        # Get the sheet as CSV
+        csv_data = get_google_sheet_as_csv(client, spreadsheet_id, sheet_name, has_headers)
+        
+        if not csv_data:
+            return 0
+            
+        # Convert the CSV string back to a file-like object
+        csv_file = io.StringIO(csv_data)
+        
+        # Import using the CSV function with workspace_id
+        return import_from_csv(csv_file, has_headers, workspace_id=workspace_id)
     except Exception as e:
         logger.error(f"Error importing from Google Sheet: {str(e)}")
         raise
@@ -540,7 +707,7 @@ def get_lead_data_for_export(user=None, include_custom_fields=True, status_filte
         rows = []
         for lead in leads:
             # Get assignment info
-            current_assignment = lead.current_assignment()
+            current_assignment = lead.current_assignment
             assigned_to = "Unassigned"
             if current_assignment and hasattr(current_assignment, 'assigned_user') and current_assignment.assigned_user is not None:
                 assigned_to = current_assignment.assigned_user.username

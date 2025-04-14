@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Header Mappings - Admin Panel{% endblock %}
+
+{% block content %}
+{% include 'admin_nav.html' %}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="fas fa-table me-2"></i>CSV Header Mappings
+                    </h3>
+                    <a href="{{ url_for('add_header_mapping') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add New Mapping
+                    </a>
+                </div>
+                <p class="text-muted">
+                    Create and manage custom CSV header mappings for importing leads.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-list me-2"></i>Existing Mappings
+            </div>
+            <div class="card-body">
+                {% if mappings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Workspace</th>
+                                    <th>Created By</th>
+                                    <th>Created</th>
+                                    <th>Default</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mapping in mappings %}
+                                    <tr>
+                                        <td>{{ mapping.name }}</td>
+                                        <td>{{ mapping.description or "-" }}</td>
+                                        <td>
+                                            {% if mapping.workspace %}
+                                                <span class="badge bg-info">{{ mapping.workspace.name }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Global</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ mapping.user.username }}</td>
+                                        <td>{{ mapping.created_at.strftime("%Y-%m-%d") }}</td>
+                                        <td>
+                                            {% if mapping.is_default %}
+                                                <span class="badge bg-success">Default</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">No</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('edit_header_mapping', mapping_id=mapping.id) }}" class="btn btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-danger" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteModal" 
+                                                        data-mapping-id="{{ mapping.id }}"
+                                                        data-mapping-name="{{ mapping.name }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No header mappings have been created yet. 
+                        <a href="{{ url_for('add_header_mapping') }}" class="alert-link">Create your first mapping</a>.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Header Mapping
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the mapping <strong id="mappingName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up delete modal
+        const deleteModal = document.getElementById('deleteModal');
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const mappingId = button.getAttribute('data-mapping-id');
+                const mappingName = button.getAttribute('data-mapping-name');
+                
+                document.getElementById('mappingName').textContent = mappingName;
+                document.getElementById('deleteForm').action = "{{ url_for('delete_header_mapping', mapping_id=0) }}".replace('0', mappingId);
+            });
+        }
+    });
+</script>
+{% endblock %}

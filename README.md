@@ -30,7 +30,11 @@ A secure web application for displaying and managing leads from a PostgreSQL dat
 1. Clone the repository
 2. Install the required dependencies
 3. Set up environment variables (see `.env.sample`)
-4. Run the application:
+4. Run database migrations:
+   ```
+   python migrations.py
+   ```
+5. Run the application:
    ```
    gunicorn --bind 0.0.0.0:5000 main:app
    ```
@@ -38,6 +42,25 @@ A secure web application for displaying and managing leads from a PostgreSQL dat
 ### Production Deployment
 
 For detailed deployment instructions, see the [Deployment Guide](DEPLOYMENT_GUIDE.md).
+
+### Database Migrations
+
+When updating an existing installation, run the migrations script to add the new fields:
+
+```
+python migrations.py
+```
+
+This will add the following fields to the lead table:
+- first_name
+- last_name
+- city
+- state
+- zipcode
+- bank_name
+- date_captured
+- time_captured
+- workspace_id (with foreign key constraint)
 
 ## Environment Variables
 

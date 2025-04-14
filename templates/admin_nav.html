@@ -11,6 +11,9 @@
     <a href="{{ url_for('admin_fields') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin_fields' or request.endpoint == 'edit_field' %}active{% endif %}">
         Custom Fields
     </a>
+    <a href="{{ url_for('admin_header_mappings') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin_header_mappings' or request.endpoint == 'add_header_mapping' or request.endpoint == 'edit_header_mapping' %}active{% endif %}">
+        Header Mappings
+    </a>
     <a href="{{ url_for('admin_imports') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin_imports' or request.endpoint == 'import_csv' or request.endpoint == 'import_sheet' %}active{% endif %}">
         Import / Export
     </a>

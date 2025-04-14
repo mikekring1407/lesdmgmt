@@ -36,18 +36,20 @@
                     {{ form.hidden_tag() }}
                     {{ form.lead_id() }}
                     
+                    <!-- Personal Information Section -->
+                    <h5 class="mb-3">Personal Information</h5>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="{{ form.name.id }}" class="form-label">Name *</label>
-                            {{ form.name(class="form-control") }}
-                            {% for error in form.name.errors %}
+                            <label for="{{ form.first_name.id }}" class="form-label">First Name</label>
+                            {{ form.first_name(class="form-control") }}
+                            {% for error in form.first_name.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         <div class="col-md-6">
-                            <label for="{{ form.company.id }}" class="form-label">Company</label>
-                            {{ form.company(class="form-control") }}
-                            {% for error in form.company.errors %}
+                            <label for="{{ form.last_name.id }}" class="form-label">Last Name</label>
+                            {{ form.last_name(class="form-control") }}
+                            {% for error in form.last_name.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
@@ -71,17 +73,93 @@
                     </div>
                     
                     <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="{{ form.company.id }}" class="form-label">Company</label>
+                            {{ form.company(class="form-control") }}
+                            {% for error in form.company.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Legacy field - hidden but included for compatibility -->
+                    <div class="d-none">
+                        {{ form.name(class="form-control") }}
+                    </div>
+                    
+                    <!-- Address Information Section -->
+                    <h5 class="mb-3 mt-4">Address Information</h5>
+                    <div class="row mb-3">
                         <div class="col-md-6">
+                            <label for="{{ form.city.id }}" class="form-label">City</label>
+                            {{ form.city(class="form-control") }}
+                            {% for error in form.city.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.state.id }}" class="form-label">State</label>
+                            {{ form.state(class="form-control") }}
+                            {% for error in form.state.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.zipcode.id }}" class="form-label">Zip Code</label>
+                            {{ form.zipcode(class="form-control") }}
+                            {% for error in form.zipcode.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Information Section -->
+                    <h5 class="mb-3 mt-4">Additional Information</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.bank_name.id }}" class="form-label">Bank Name</label>
+                            {{ form.bank_name(class="form-control") }}
+                            {% for error in form.bank_name.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.date_captured.id }}" class="form-label">Date Captured</label>
+                            {{ form.date_captured(class="form-control") }}
+                            {% for error in form.date_captured.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.time_captured.id }}" class="form-label">Time Captured</label>
+                            {{ form.time_captured(class="form-control") }}
+                            {% for error in form.time_captured.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Lead Management Section -->
+                    <h5 class="mb-3 mt-4">Lead Management</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
                             <label for="{{ form.status.id }}" class="form-label">Status</label>
                             {{ form.status(class="form-select") }}
                             {% for error in form.status.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="{{ form.source.id }}" class="form-label">Source</label>
                             {{ form.source(class="form-control", placeholder="Where did this lead come from?") }}
                             {% for error in form.source.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.workspace_id.id }}" class="form-label">Workspace</label>
+                            {{ form.workspace_id(class="form-select") }}
+                            {% for error in form.workspace_id.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>

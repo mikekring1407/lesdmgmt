@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('admin_header_mappings') }}" class="btn btn-outline-primary me-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-{{ 'edit' if mapping else 'plus' }} me-2"></i>{{ title }}
+                        </h3>
+                        <p class="text-muted small mt-1 mb-0">
+                            {{ 'Update existing header mapping configuration' if mapping else 'Create a new CSV header mapping' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-columns me-2"></i>Header Mapping Configuration
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    {{ form.mapping_id() }}
+                    
+                    <!-- Basic Information -->
+                    <h5 class="mb-3">Basic Information</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.name.id }}" class="form-label">Mapping Name *</label>
+                            {{ form.name(class="form-control") }}
+                            {% if form.name.description %}
+                                <div class="form-text">{{ form.name.description }}</div>
+                            {% endif %}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.is_default.id }}" class="form-label">Default Setting</label>
+                            <div class="form-check mt-2">
+                                {{ form.is_default(class="form-check-input") }}
+                                <label class="form-check-label" for="{{ form.is_default.id }}">
+                                    Set as default mapping
+                                </label>
+                            </div>
+                            {% if form.is_default.description %}
+                                <div class="form-text">{{ form.is_default.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.description.id }}" class="form-label">Description</label>
+                            {{ form.description(class="form-control", rows=2) }}
+                            {% if form.description.description %}
+                                <div class="form-text">{{ form.description.description }}</div>
+                            {% endif %}
+                            {% for error in form.description.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.workspace_id.id }}" class="form-label">Associated Workspace</label>
+                            {{ form.workspace_id(class="form-select") }}
+                            {% if form.workspace_id.description %}
+                                <div class="form-text">{{ form.workspace_id.description }}</div>
+                            {% endif %}
+                            {% for error in form.workspace_id.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information Fields -->
+                    <h5 class="mb-3 mt-4">Contact Information Headers</h5>
+                    <p class="text-muted small">
+                        Enter the CSV header names that correspond to each field. Leave empty for fields you don't need.
+                    </p>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.first_name_header.id }}" class="form-label">First Name Header</label>
+                            {{ form.first_name_header(class="form-control", placeholder="e.g., First Name, Given Name") }}
+                            {% if form.first_name_header.description %}
+                                <div class="form-text">{{ form.first_name_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.last_name_header.id }}" class="form-label">Last Name Header</label>
+                            {{ form.last_name_header(class="form-control", placeholder="e.g., Last Name, Surname") }}
+                            {% if form.last_name_header.description %}
+                                <div class="form-text">{{ form.last_name_header.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.email_header.id }}" class="form-label">Email Header</label>
+                            {{ form.email_header(class="form-control", placeholder="e.g., Email, Email Address") }}
+                            {% if form.email_header.description %}
+                                <div class="form-text">{{ form.email_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.phone_header.id }}" class="form-label">Phone Header</label>
+                            {{ form.phone_header(class="form-control", placeholder="e.g., Phone, Phone Number") }}
+                            {% if form.phone_header.description %}
+                                <div class="form-text">{{ form.phone_header.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.company_header.id }}" class="form-label">Company Header</label>
+                            {{ form.company_header(class="form-control", placeholder="e.g., Company, Organization") }}
+                            {% if form.company_header.description %}
+                                <div class="form-text">{{ form.company_header.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Address Information Fields -->
+                    <h5 class="mb-3 mt-4">Address Information Headers</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.city_header.id }}" class="form-label">City Header</label>
+                            {{ form.city_header(class="form-control", placeholder="e.g., City, Town") }}
+                            {% if form.city_header.description %}
+                                <div class="form-text">{{ form.city_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.state_header.id }}" class="form-label">State Header</label>
+                            {{ form.state_header(class="form-control", placeholder="e.g., State, Province") }}
+                            {% if form.state_header.description %}
+                                <div class="form-text">{{ form.state_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.zipcode_header.id }}" class="form-label">Zip Code Header</label>
+                            {{ form.zipcode_header(class="form-control", placeholder="e.g., Zip, Postal Code") }}
+                            {% if form.zipcode_header.description %}
+                                <div class="form-text">{{ form.zipcode_header.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Information Fields -->
+                    <h5 class="mb-3 mt-4">Additional Information Headers</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.bank_name_header.id }}" class="form-label">Bank Name Header</label>
+                            {{ form.bank_name_header(class="form-control", placeholder="e.g., Bank, Bank Name") }}
+                            {% if form.bank_name_header.description %}
+                                <div class="form-text">{{ form.bank_name_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.date_captured_header.id }}" class="form-label">Date Captured Header</label>
+                            {{ form.date_captured_header(class="form-control", placeholder="e.g., Date, Capture Date") }}
+                            {% if form.date_captured_header.description %}
+                                <div class="form-text">{{ form.date_captured_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.time_captured_header.id }}" class="form-label">Time Captured Header</label>
+                            {{ form.time_captured_header(class="form-control", placeholder="e.g., Time, Capture Time") }}
+                            {% if form.time_captured_header.description %}
+                                <div class="form-text">{{ form.time_captured_header.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Lead Management Fields -->
+                    <h5 class="mb-3 mt-4">Lead Management Headers</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.status_header.id }}" class="form-label">Status Header</label>
+                            {{ form.status_header(class="form-control", placeholder="e.g., Status, Lead Status") }}
+                            {% if form.status_header.description %}
+                                <div class="form-text">{{ form.status_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.source_header.id }}" class="form-label">Source Header</label>
+                            {{ form.source_header(class="form-control", placeholder="e.g., Source, Lead Source") }}
+                            {% if form.source_header.description %}
+                                <div class="form-text">{{ form.source_header.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.notes_header.id }}" class="form-label">Notes Header</label>
+                            {{ form.notes_header(class="form-control", placeholder="e.g., Notes, Comments") }}
+                            {% if form.notes_header.description %}
+                                <div class="form-text">{{ form.notes_header.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('admin_header_mappings') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

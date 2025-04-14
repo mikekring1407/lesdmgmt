@@ -60,7 +60,11 @@ Set up the following environment variables in your hosting environment:
 
 5. **Database Migration**:
    - Ensure the application can access your PostgreSQL database
-   - The application will automatically create necessary tables on first run
+   - Run the migration script to add all necessary tables and fields:
+     ```
+     python migrations.py
+     ```
+   - This will create tables if they don't exist and add any missing columns
 
 6. **Configure Web Server**:
    - Set up the application to run with a WSGI server like gunicorn
@@ -97,6 +101,22 @@ If you need to configure Apache manually, create a `.htaccess` file:
 ## Troubleshooting
 
 - **Database Connection Issues**: Verify your DATABASE_URL is correct and the database user has proper permissions
+- **Database Schema Issues**: If you encounter errors about missing columns, run the migration script:
+  ```
+  python migrations.py
+  ```
+- **Manual Database Updates**: If the migration script fails, you can manually update your database schema with these SQL commands:
+  ```sql
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS first_name VARCHAR(50);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS last_name VARCHAR(50);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS city VARCHAR(50);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS state VARCHAR(50);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS zipcode VARCHAR(20);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS date_captured VARCHAR(20);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS time_captured VARCHAR(20);
+  ALTER TABLE lead ADD COLUMN IF NOT EXISTS workspace_id INTEGER;
+  ```
 - **File Permissions**: Ensure all files have the correct permissions (typically 644 for files, 755 for directories)
 - **Google Sheets API**: If using Google Sheets import, ensure the GOOGLE_CREDENTIALS environment variable is properly set
 - **Logs**: Check application logs for error messages (typically in the logs directory of your hosting account)

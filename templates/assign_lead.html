@@ -32,10 +32,18 @@
                 <i class="fas fa-address-card me-2"></i>Lead Information
             </div>
             <div class="card-body">
+                <!-- Personal Information -->
+                <h6 class="card-subtitle mb-3 text-muted">Personal Information</h6>
                 <div class="row">
                     <div class="col-md-6">
                         <p class="mb-1"><strong>Name:</strong></p>
-                        <p class="mb-3">{{ lead.name or "Unnamed" }}</p>
+                        <p class="mb-3">
+                            {% if lead.first_name or lead.last_name %}
+                                {{ lead.first_name or "" }} {{ lead.last_name or "" }}
+                            {% else %}
+                                {{ lead.name or "Unnamed" }}
+                            {% endif %}
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <p class="mb-1"><strong>Company:</strong></p>
@@ -54,8 +62,44 @@
                     </div>
                 </div>
                 
+                <!-- Address Information -->
+                <h6 class="card-subtitle mb-3 mt-4 text-muted">Address Information</h6>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>City:</strong></p>
+                        <p class="mb-3">{{ lead.city or "-" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>State:</strong></p>
+                        <p class="mb-3">{{ lead.state or "-" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Zip Code:</strong></p>
+                        <p class="mb-3">{{ lead.zipcode or "-" }}</p>
+                    </div>
+                </div>
+                
+                <!-- Additional Information -->
+                <h6 class="card-subtitle mb-3 mt-4 text-muted">Additional Information</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Bank Name:</strong></p>
+                        <p class="mb-3">{{ lead.bank_name or "-" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Date Captured:</strong></p>
+                        <p class="mb-3">{{ lead.date_captured or "-" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Time Captured:</strong></p>
+                        <p class="mb-3">{{ lead.time_captured or "-" }}</p>
+                    </div>
+                </div>
+                
+                <!-- Lead Management -->
+                <h6 class="card-subtitle mb-3 mt-4 text-muted">Lead Management</h6>
+                <div class="row">
+                    <div class="col-md-4">
                         <p class="mb-1"><strong>Status:</strong></p>
                         <p class="mb-3">
                             {% if lead.status == "New" %}
@@ -73,9 +117,19 @@
                             {% endif %}
                         </p>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <p class="mb-1"><strong>Source:</strong></p>
                         <p class="mb-3">{{ lead.source or "-" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Workspace:</strong></p>
+                        <p class="mb-3">
+                            {% if lead.workspace %}
+                                <span class="badge bg-info">{{ lead.workspace.name }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No Workspace</span>
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
                 
