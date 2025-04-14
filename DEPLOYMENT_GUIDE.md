@@ -1,134 +1,100 @@
-# Next US - Lead Management System Deployment Guide
+# Deployment Guide for Next US Lead Management System
 
-This guide provides instructions for deploying the Next US lead management application on a third-party hosting service, particularly for cPanel environments.
+## April 2025 Updates
 
-## Required Dependencies
+### 1. Workspace-Specific Header Mappings for Imports
 
-Ensure your hosting environment has Python 3.8+ and the following packages installed:
+We've enhanced the system to support workspace-specific header mappings for both CSV and Google Sheets imports:
 
-```
-email-validator==2.0.0
-Flask==2.3.3
-Flask-Login==0.6.2
-Flask-SQLAlchemy==3.1.1
-Flask-WTF==1.1.1
-gspread==5.10.0
-gunicorn==23.0.0
-oauth2client==4.1.3
-psycopg2-binary==2.9.7
-SQLAlchemy==2.0.23
-Werkzeug==2.3.7
-WTForms==3.0.1
-```
+- Added workspace and header mapping selection fields to the import forms
+- Implemented Google Sheets CSV conversion for consistent import handling
+- Updated import routes to work with the new mapping options
 
-## Database Setup
+### 2. Database Schema Updates
 
-1. Create a PostgreSQL database on your hosting provider
-2. Note the database credentials (hostname, username, password, database name)
-3. You'll need these for environment configuration
+To fix the "string data right truncation" error during CSV imports, we've increased column lengths in the Lead model:
 
-## Environment Variables
+| Field | Old Size | New Size |
+|-------|----------|----------|
+| phone | VARCHAR(20) | VARCHAR(50) |
+| first_name | VARCHAR(50) | VARCHAR(100) |
+| last_name | VARCHAR(50) | VARCHAR(100) |
+| city | VARCHAR(50) | VARCHAR(100) |
+| state | VARCHAR(50) | VARCHAR(100) |
+| zipcode | VARCHAR(20) | VARCHAR(50) |
+| date_captured | VARCHAR(20) | VARCHAR(50) |
+| time_captured | VARCHAR(20) | VARCHAR(50) |
+| bank_name | VARCHAR(100) | VARCHAR(200) |
+| name | VARCHAR(100) | VARCHAR(200) |
+| company | VARCHAR(100) | VARCHAR(200) |
+| status | VARCHAR(20) | VARCHAR(50) |
+| source | VARCHAR(50) | VARCHAR(100) |
 
-Set up the following environment variables in your hosting environment:
+## Deployment Steps for Render.com
 
-- `DATABASE_URL`: Your PostgreSQL connection string (format: `postgresql://username:password@hostname:port/database`)
-- `SESSION_SECRET`: A strong random string for Flask session encryption
-- `GOOGLE_CREDENTIALS`: (Optional) JSON credentials for Google Sheets API if you plan to use the import from Google Sheets feature
+### 1. Backup Your Database
 
-## Deployment Steps for cPanel
+**Important:** Always backup your database before schema changes:
 
-1. **Upload Files**:
-   - Upload all application files to your hosting account via FTP or cPanel File Manager
-   - Keep the directory structure intact
-
-2. **Setup Python Application**:
-   - In cPanel, locate the "Setup Python App" or similar section
-   - Create a new Python application pointing to your uploaded directory
-   - Set the application entry point to `main.py`
-   - Configure the application to use Python 3.8 or newer
-
-3. **Configure Environment Variables**:
-   - In the Python application settings, add the required environment variables
-   - Alternatively, create a `.env` file in the application root directory
-
-4. **Set Up Virtual Environment**:
-   - Most cPanel setups automatically create a virtual environment
-   - If needed, install the required packages using pip:
-     ```
-     pip install -r requirements.txt
-     ```
-
-5. **Database Migration**:
-   - Ensure the application can access your PostgreSQL database
-   - Run the migration script to add all necessary tables and fields:
-     ```
-     python migrations.py
-     ```
-   - This will create tables if they don't exist and add any missing columns
-
-6. **Configure Web Server**:
-   - Set up the application to run with a WSGI server like gunicorn
-   - Configure your domain/subdomain to point to the application
-
-## Passenger Configuration (if using)
-
-If your hosting provider uses Passenger for Python applications, create a `passenger_wsgi.py` file:
-
-```python
-import sys
-import os
-INTERP = os.path.expanduser("/path/to/your/venv/bin/python")
-if sys.executable != INTERP:
-    os.execl(INTERP, INTERP, *sys.argv)
-
-from main import app as application
+```bash
+pg_dump $DATABASE_URL > nextus_backup_apr2025.sql
 ```
 
-Replace `/path/to/your/venv/bin/python` with the actual path to your Python interpreter.
+### 2. Update Dependency Files
 
-## Apache Configuration (if needed)
+We've included updated dependency files for your deployment:
 
-If you need to configure Apache manually, create a `.htaccess` file:
+- **pyproject.toml** - For Poetry-based deployment on Render.com
+- **requirements-render.txt** - Standard pip requirements file if needed
 
+Make sure these files are included in your repository or deployment package.
+
+### 3. Deploy Code Changes
+
+#### Option A: Git Integration (Recommended)
+
+If your Render app is linked to a Git repository:
+
+1. Commit all changes including the updated models and dependency files
+2. Push changes to your repository
+3. Render will automatically detect and deploy the changes
+
+#### Option B: Manual Deploy
+
+If not using Git integration:
+
+1. Log in to your Render dashboard
+2. Select your Next US application
+3. Click "Manual Deploy" and select "Deploy latest commit" or upload your code
+
+### 3. Run Database Migrations
+
+After deployment, you'll need to run the migration to update column lengths:
+
+1. Navigate to your Render dashboard
+2. Open a Shell for your service
+3. Run the migration script:
+
+```bash
+python migrate_column_lengths.py
 ```
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^(.*)$ /app.py/$1 [QSA,L]
-</IfModule>
-```
+
+This will increase all column lengths to match the updated model definitions.
+
+### 4. Verify the Deployment
+
+1. Log in to your application
+2. Navigate to Admin > Imports
+3. Verify that workspace and header mapping dropdowns appear correctly
+4. Try importing a CSV file with the previously failing data
+5. Check that the import completes without the truncation error
 
 ## Troubleshooting
 
-- **Database Connection Issues**: Verify your DATABASE_URL is correct and the database user has proper permissions
-- **Database Schema Issues**: If you encounter errors about missing columns, run the migration script:
-  ```
-  python migrations.py
-  ```
-- **Manual Database Updates**: If the migration script fails, you can manually update your database schema with these SQL commands:
-  ```sql
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS first_name VARCHAR(50);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS last_name VARCHAR(50);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS city VARCHAR(50);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS state VARCHAR(50);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS zipcode VARCHAR(20);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS date_captured VARCHAR(20);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS time_captured VARCHAR(20);
-  ALTER TABLE lead ADD COLUMN IF NOT EXISTS workspace_id INTEGER;
-  ```
-- **File Permissions**: Ensure all files have the correct permissions (typically 644 for files, 755 for directories)
-- **Google Sheets API**: If using Google Sheets import, ensure the GOOGLE_CREDENTIALS environment variable is properly set
-- **Logs**: Check application logs for error messages (typically in the logs directory of your hosting account)
+If you encounter issues during deployment:
 
-## Security Notes
+1. **Database Connection Errors**: Check that your DATABASE_URL environment variable is correctly set in Render
+2. **Migration Failures**: Examine the logs from the migration script for specific error messages
+3. **Import Errors**: If CSV imports still fail, check that the migration completed successfully
 
-- Change the default admin password immediately after first login
-- Keep your SESSION_SECRET secure and unique
-- Consider setting up HTTPS for your domain
-- Restrict file permissions to the minimum necessary
-
-## Additional Resources
-
-For more information on deploying Flask applications on cPanel, refer to:
-- [cPanel Python Application documentation](https://docs.cpanel.net/knowledge-base/web-services/python-application/)
+For persistent issues, refer to the application logs in your Render dashboard or contact support for assistance.

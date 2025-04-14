@@ -763,8 +763,9 @@ def get_lead_data_for_export(user=None, include_custom_fields=True, status_filte
 def generate_csv_file(headers, rows):
     """Generate a CSV file from headers and rows"""
     try:
-        csv_file = io.StringIO()
-        writer = csv.writer(csv_file)
+        # Use BytesIO instead of StringIO for compatibility with send_file
+        csv_buffer = io.StringIO()
+        writer = csv.writer(csv_buffer)
         
         # Write headers
         writer.writerow(headers)
@@ -772,9 +773,13 @@ def generate_csv_file(headers, rows):
         # Write data rows
         writer.writerows(rows)
         
+        # Convert to bytes for Flask's send_file
+        bytes_buffer = io.BytesIO()
+        bytes_buffer.write(csv_buffer.getvalue().encode('utf-8'))
+        
         # Reset to start of file
-        csv_file.seek(0)
-        return csv_file
+        bytes_buffer.seek(0)
+        return bytes_buffer
     except Exception as e:
         logger.error(f"Error generating CSV file: {str(e)}")
         raise

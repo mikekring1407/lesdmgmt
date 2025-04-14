@@ -66,27 +66,27 @@ class Lead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Basic contact information
-    phone = db.Column(db.String(20), nullable=True)  # Ph. Number
+    phone = db.Column(db.String(50), nullable=True)  # Ph. Number - increased from 20
     email = db.Column(db.String(100), nullable=True) # Electronic mail
-    first_name = db.Column(db.String(50), nullable=True)  # Given Name
-    last_name = db.Column(db.String(50), nullable=True)   # Last Name
-    city = db.Column(db.String(50), nullable=True)    # City
-    state = db.Column(db.String(50), nullable=True)   # State
-    zipcode = db.Column(db.String(20), nullable=True) # Zip#
-    date_captured = db.Column(db.String(20), nullable=True) # Date
-    time_captured = db.Column(db.String(20), nullable=True) # Time
-    bank_name = db.Column(db.String(100), nullable=True)   # Bnk name
+    first_name = db.Column(db.String(100), nullable=True)  # Given Name - increased from 50
+    last_name = db.Column(db.String(100), nullable=True)   # Last Name - increased from 50
+    city = db.Column(db.String(100), nullable=True)    # City - increased from 50
+    state = db.Column(db.String(100), nullable=True)   # State - increased from 50
+    zipcode = db.Column(db.String(50), nullable=True) # Zip# - increased from 20
+    date_captured = db.Column(db.String(50), nullable=True) # Date - increased from 20
+    time_captured = db.Column(db.String(50), nullable=True) # Time - increased from 20
+    bank_name = db.Column(db.String(200), nullable=True)   # Bnk name - increased from 100
     
     # Legacy fields maintained for backward compatibility
-    name = db.Column(db.String(100), nullable=True)
-    company = db.Column(db.String(100), nullable=True)
+    name = db.Column(db.String(200), nullable=True)  # increased from 100
+    company = db.Column(db.String(200), nullable=True)  # increased from 100
     
     # Workspace assignment
     workspace_id = db.Column(db.Integer, db.ForeignKey('workspace.id'), nullable=True)
     
     # Additional information - can be customized as needed
-    status = db.Column(db.String(20), default='New')  # New, Contacted, Qualified, Lost, Converted
-    source = db.Column(db.String(50), nullable=True)  # Where the lead came from
+    status = db.Column(db.String(50), default='New')  # New, Contacted, Qualified, Lost, Converted - increased from 20
+    source = db.Column(db.String(100), nullable=True)  # Where the lead came from - increased from 50
     notes = db.Column(db.Text, nullable=True)
     
     # Metadata
