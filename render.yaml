@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: lead-management-system
+    env: python
+    plan: free
+    buildCommand: pip install -r render-requirements.txt
+    postDeployCommand: python create_admin.py --username admin --email admin@example.com --password changeme123 && python create_workspace.py
+    startCommand: gunicorn main:app --bind 0.0.0.0:5000
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lead-management-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PYTHONUNBUFFERED
+        value: true
+
+databases:
+  - name: lead-management-db
+    plan: free
+    databaseName: leaddb
+    user: leaduser

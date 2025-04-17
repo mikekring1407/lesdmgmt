@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>My Leads</h1>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Filter Leads</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{{ url_for('user.leads') }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="date" class="form-label">Created Date (MM/DD/YYYY)</label>
+                    <input type="date" class="form-control" id="date" name="date" value="{{ selected_date }}">
+                </div>
+                <div class="col-md-6 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="{{ url_for('user.leads') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Bulk Actions</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('user.export_leads') }}" id="exportForm">
+            <button type="button" class="btn btn-success" id="bulkExportBtn" disabled>
+                <i class="fas fa-file-export"></i> Export Selected
+            </button>
+            <div id="exportLeadIds"></div>
+        </form>
+    </div>
+</div>
+
+<!-- Leads Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">My Assigned Leads</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped" id="leadsTable">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll">
+                        </th>
+                        <th>ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="lead-checkbox" data-id="{{ lead.id }}">
+                        </td>
+                        <td>{{ lead.id }}</td>
+                        <td>{{ lead.first_name }}</td>
+                        <td>{{ lead.last_name }}</td>
+                        <td>{{ lead.email }}</td>
+                        <td>{{ lead.phone }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ lead.status }}</span>
+                        </td>
+                        <td>{{ lead.city }}</td>
+                        <td>{{ lead.state }}</td>
+                        <td>{{ lead.created_at.strftime('%m/%d/%Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        const leadsTable = $('#leadsTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            order: [[8, 'desc']], // Sort by created date by default
+            columnDefs: [
+                { orderable: false, targets: 0 } // Disable sorting on checkbox column
+            ]
+        });
+        
+        // Handle select all checkbox
+        $('#selectAll').on('change', function() {
+            $('.lead-checkbox').prop('checked', $(this).is(':checked'));
+            updateBulkButtons();
+        });
+        
+        // Handle individual checkboxes
+        $(document).on('change', '.lead-checkbox', function() {
+            updateBulkButtons();
+            
+            // Update select all checkbox
+            if ($('.lead-checkbox:checked').length === $('.lead-checkbox').length) {
+                $('#selectAll').prop('checked', true);
+            } else {
+                $('#selectAll').prop('checked', false);
+            }
+        });
+        
+        // Update bulk action buttons state
+        function updateBulkButtons() {
+            const selectedCount = $('.lead-checkbox:checked').length;
+            
+            if (selectedCount > 0) {
+                $('#bulkExportBtn').prop('disabled', false);
+                $('#bulkExportBtn').html(`<i class="fas fa-file-export"></i> Export Selected (${selectedCount})`);
+            } else {
+                $('#bulkExportBtn').prop('disabled', true);
+                $('#bulkExportBtn').html(`<i class="fas fa-file-export"></i> Export Selected`);
+            }
+        }
+        
+        // Handle bulk export
+        $('#bulkExportBtn').on('click', function() {
+            const selectedIds = getSelectedLeadIds();
+            
+            // Clear previous inputs
+            $('#exportLeadIds').empty();
+            
+            // Add hidden inputs for each selected ID
+            selectedIds.forEach(id => {
+                $('#exportLeadIds').append(`<input type="hidden" name="lead_ids[]" value="${id}">`);
+            });
+            
+            // Submit the form
+            $('#exportForm').submit();
+        });
+        
+        // Get selected lead IDs
+        function getSelectedLeadIds() {
+            const selectedIds = [];
+            $('.lead-checkbox:checked').each(function() {
+                selectedIds.push($(this).data('id'));
+            });
+            return selectedIds;
+        }
+    });
+</script>
+{% endblock %}

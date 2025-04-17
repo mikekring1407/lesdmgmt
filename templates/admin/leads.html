@@ -1,0 +1,406 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1>Leads Management</h1>
+    </div>
+    <div class="col-md-6 text-end">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="fas fa-upload"></i> Upload Leads
+        </button>
+    </div>
+</div>
+
+{% if mapping %}
+<!-- CSV Header Mapping -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Map CSV Headers to Database Fields</h4>
+    </div>
+    <div class="card-body">
+        <p>Please map the CSV headers to the corresponding database fields for workspace <strong>{{ workspace.name }}</strong>.</p>
+        <form method="post" action="{{ url_for('admin.upload_leads') }}" enctype="multipart/form-data">
+            <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
+            <input type="hidden" name="map_headers" value="1">
+            
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>CSV Header</th>
+                            <th>Map To Field</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for header in csv_headers %}
+                        <tr>
+                            <td>{{ header }}</td>
+                            <td>
+                                <select class="form-select" name="header_{{ header }}">
+                                    <option value="ignore">-- Ignore --</option>
+                                    {% for db_header in db_headers %}
+                                    <option value="{{ db_header }}">{{ db_header }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="text-end mt-3">
+                <a href="{{ url_for('admin.leads') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Import Leads</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Filter Leads</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{{ url_for('admin.leads') }}">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="workspace_id" class="form-label">Workspace</label>
+                    <select class="form-select" id="workspace_id" name="workspace_id">
+                        <option value="">All Workspaces</option>
+                        {% for workspace in workspaces %}
+                        <option value="{{ workspace.id }}" {% if selected_workspace == workspace.id %}selected{% endif %}>
+                            {{ workspace.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Statuses</option>
+                        {% for status in statuses %}
+                        <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>
+                            {{ status }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="assigned_to" class="form-label">Assigned To</label>
+                    <select class="form-select" id="assigned_to" name="assigned_to">
+                        <option value="">All Users</option>
+                        <option value="-1" {% if selected_assigned_to == -1 %}selected{% endif %}>Unassigned</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if selected_assigned_to == user.id %}selected{% endif %}>
+                            {{ user.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="start_date" class="form-label">Start Date (MM/DD/YYYY)</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ selected_start_date }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="end_date" class="form-label">End Date (MM/DD/YYYY)</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ selected_end_date }}">
+                </div>
+                <div class="col-md-6 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="{{ url_for('admin.leads') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Bulk Actions</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <form method="post" action="{{ url_for('admin.assign_leads') }}" id="assignForm">
+                    <div class="input-group">
+                        <select class="form-select" name="user_id" id="bulkAssignUser">
+                            <option value="-1">Unassign</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-primary" id="bulkAssignBtn" disabled>
+                            Assign Selected
+                        </button>
+                    </div>
+                    <div id="assignLeadIds"></div>
+                </form>
+            </div>
+            <div class="col-md-4 mb-3">
+                <form method="post" action="{{ url_for('admin.export_leads') }}" id="exportForm">
+                    <button type="button" class="btn btn-success w-100" id="bulkExportBtn" disabled>
+                        <i class="fas fa-file-export"></i> Export Selected
+                    </button>
+                    <div id="exportLeadIds"></div>
+                </form>
+            </div>
+            <div class="col-md-4 mb-3">
+                <form method="post" action="{{ url_for('admin.delete_leads') }}" id="deleteForm">
+                    <button type="button" class="btn btn-danger w-100" id="bulkDeleteBtn" disabled>
+                        <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                    <div id="deleteLeadIds"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leads Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Leads</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped" id="leadsTable">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll">
+                        </th>
+                        <th>ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Created</th>
+                        <th>Assigned To</th>
+                        <th>Workspace</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="lead-checkbox" data-id="{{ lead.id }}">
+                        </td>
+                        <td>{{ lead.id }}</td>
+                        <td>{{ lead.first_name }}</td>
+                        <td>{{ lead.last_name }}</td>
+                        <td>{{ lead.email }}</td>
+                        <td>{{ lead.phone }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ lead.status }}</span>
+                        </td>
+                        <td>{{ lead.city }}</td>
+                        <td>{{ lead.state }}</td>
+                        <td>{{ lead.created_at.strftime('%m/%d/%Y') }}</td>
+                        <td>
+                            {% if lead.assigned_to %}
+                                {% for user in users %}
+                                    {% if user.id == lead.assigned_to %}
+                                        {{ user.username }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% for workspace in workspaces %}
+                                {% if workspace.id == lead.workspace_id %}
+                                    {{ workspace.name }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Upload Leads</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('admin.upload_leads') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="workspace_id" class="form-label">Workspace</label>
+                        <select class="form-select" id="workspace_id" name="workspace_id" required>
+                            <option value="">Select Workspace</option>
+                            {% for workspace in workspaces %}
+                            <option value="{{ workspace.id }}">{{ workspace.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="file" class="form-label">CSV File</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                        <div class="form-text">
+                            The CSV file should contain data matching the workspace's schema.
+                            You'll be able to map the CSV headers to the workspace fields in the next step.
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the selected leads? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Leads</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not mapping %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        const leadsTable = $('#leadsTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            order: [[9, 'desc']], // Sort by created date by default
+            columnDefs: [
+                { orderable: false, targets: 0 } // Disable sorting on checkbox column
+            ]
+        });
+        
+        // Handle select all checkbox
+        $('#selectAll').on('change', function() {
+            $('.lead-checkbox').prop('checked', $(this).is(':checked'));
+            updateBulkButtons();
+        });
+        
+        // Handle individual checkboxes
+        $(document).on('change', '.lead-checkbox', function() {
+            updateBulkButtons();
+            
+            // Update select all checkbox
+            if ($('.lead-checkbox:checked').length === $('.lead-checkbox').length) {
+                $('#selectAll').prop('checked', true);
+            } else {
+                $('#selectAll').prop('checked', false);
+            }
+        });
+        
+        // Update bulk action buttons state
+        function updateBulkButtons() {
+            const selectedCount = $('.lead-checkbox:checked').length;
+            
+            if (selectedCount > 0) {
+                $('#bulkAssignBtn, #bulkExportBtn, #bulkDeleteBtn').prop('disabled', false);
+            } else {
+                $('#bulkAssignBtn, #bulkExportBtn, #bulkDeleteBtn').prop('disabled', true);
+            }
+            
+            // Update button text with count
+            $('#bulkAssignBtn').text(`Assign Selected (${selectedCount})`);
+            $('#bulkExportBtn').html(`<i class="fas fa-file-export"></i> Export Selected (${selectedCount})`);
+            $('#bulkDeleteBtn').html(`<i class="fas fa-trash"></i> Delete Selected (${selectedCount})`);
+        }
+        
+        // Handle bulk assign
+        $('#bulkAssignBtn').on('click', function() {
+            const selectedIds = getSelectedLeadIds();
+            
+            // Clear previous inputs
+            $('#assignLeadIds').empty();
+            
+            // Add hidden inputs for each selected ID
+            selectedIds.forEach(id => {
+                $('#assignLeadIds').append(`<input type="hidden" name="lead_ids[]" value="${id}">`);
+            });
+            
+            // Submit the form
+            $('#assignForm').submit();
+        });
+        
+        // Handle bulk export
+        $('#bulkExportBtn').on('click', function() {
+            const selectedIds = getSelectedLeadIds();
+            
+            // Clear previous inputs
+            $('#exportLeadIds').empty();
+            
+            // Add hidden inputs for each selected ID
+            selectedIds.forEach(id => {
+                $('#exportLeadIds').append(`<input type="hidden" name="lead_ids[]" value="${id}">`);
+            });
+            
+            // Submit the form
+            $('#exportForm').submit();
+        });
+        
+        // Handle bulk delete button click
+        $('#bulkDeleteBtn').on('click', function() {
+            // Show confirmation modal
+            $('#deleteConfirmModal').modal('show');
+        });
+        
+        // Handle delete confirmation
+        $('#confirmDeleteBtn').on('click', function() {
+            const selectedIds = getSelectedLeadIds();
+            
+            // Clear previous inputs
+            $('#deleteLeadIds').empty();
+            
+            // Add hidden inputs for each selected ID
+            selectedIds.forEach(id => {
+                $('#deleteLeadIds').append(`<input type="hidden" name="lead_ids[]" value="${id}">`);
+            });
+            
+            // Submit the form
+            $('#deleteForm').submit();
+        });
+        
+        // Get selected lead IDs
+        function getSelectedLeadIds() {
+            const selectedIds = [];
+            $('.lead-checkbox:checked').each(function() {
+                selectedIds.push($(this).data('id'));
+            });
+            return selectedIds;
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

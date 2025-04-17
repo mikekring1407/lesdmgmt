@@ -1,0 +1,225 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Admin Dashboard</h1>
+        <p class="text-muted">Overview of your lead management system</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Leads</h5>
+                <h2 class="card-text">{{ all_time_stats.total }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Assigned Leads</h5>
+                <h2 class="card-text">{{ all_time_stats.assigned }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Unassigned Leads</h5>
+                <h2 class="card-text">{{ all_time_stats.unassigned }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">New Today</h5>
+                <h2 class="card-text">{{ daily_stats.total }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Time-Based Stats -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Daily Statistics</div>
+            <div class="card-body">
+                <p><strong>Leads:</strong> {{ daily_stats.total }}</p>
+                <p><strong>Assigned:</strong> {{ daily_stats.assigned }}</p>
+                <p><strong>Unassigned:</strong> {{ daily_stats.unassigned }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Weekly Statistics</div>
+            <div class="card-body">
+                <p><strong>Leads:</strong> {{ weekly_stats.total }}</p>
+                <p><strong>Assigned:</strong> {{ weekly_stats.assigned }}</p>
+                <p><strong>Unassigned:</strong> {{ weekly_stats.unassigned }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Monthly Statistics</div>
+            <div class="card-body">
+                <p><strong>Leads:</strong> {{ monthly_stats.total }}</p>
+                <p><strong>Assigned:</strong> {{ monthly_stats.assigned }}</p>
+                <p><strong>Unassigned:</strong> {{ monthly_stats.unassigned }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Status Distribution</div>
+            <div class="card-body">
+                <canvas id="statusChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Workspace Distribution</div>
+            <div class="card-body">
+                <canvas id="workspaceChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Stats -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">User Assignment Distribution</div>
+            <div class="card-body">
+                <canvas id="userChart" width="800" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: [
+                {% for status, count in all_time_stats.status_breakdown.items() %}
+                '{{ status }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Leads by Status',
+                data: [
+                    {% for status, count in all_time_stats.status_breakdown.items() %}
+                    {{ count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(199, 199, 199, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    // Workspace Chart
+    const workspaceCtx = document.getElementById('workspaceChart').getContext('2d');
+    const workspaceChart = new Chart(workspaceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for workspace, count in all_time_stats.workspace_breakdown.items() %}
+                '{{ workspace }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Leads by Workspace',
+                data: [
+                    {% for workspace, count in all_time_stats.workspace_breakdown.items() %}
+                    {{ count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    // User Chart
+    const userCtx = document.getElementById('userChart').getContext('2d');
+    const userChart = new Chart(userCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for user, count in all_time_stats.user_breakdown.items() %}
+                '{{ user }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Leads Assigned',
+                data: [
+                    {% for user, count in all_time_stats.user_breakdown.items() %}
+                    {{ count }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

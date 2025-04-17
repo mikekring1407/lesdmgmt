@@ -1,41 +1,50 @@
-{% extends 'base.html' %}
-
-{% block title %}Login - Next US Lead Management{% endblock %}
+{% extends 'layout.html' %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white text-center py-3">
-                <h4 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Login</h4>
+    <div class="col-md-6 text-center mb-4">
+        <img src="{{ url_for('static', filename='images/nextus_logo.png') }}" alt="Nextus Logo" style="max-width: 250px;" class="logo-animation">
+    </div>
+</div>
+
+<style>
+    @keyframes logoReveal {
+        0% {
+            opacity: 0;
+            transform: scale(0.5) rotate(-15deg);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.1) rotate(5deg);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1) rotate(0);
+        }
+    }
+    
+    .logo-animation {
+        animation: logoReveal 1.2s ease-out forwards;
+    }
+</style>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Login</h4>
             </div>
-            <div class="card-body p-4">
-                <form method="POST">
-                    {{ form.hidden_tag() }}
-                    
+            <div class="card-body">
+                <form method="post" action="{{ url_for('auth.login') }}">
                     <div class="mb-3">
-                        <label for="{{ form.username.id }}" class="form-label">Username</label>
-                        {{ form.username(class="form-control", placeholder="Enter your username") }}
-                        {% for error in form.username.errors %}
-                            <div class="text-danger small mt-1">{{ error }}</div>
-                        {% endfor %}
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
                     </div>
-                    
-                    <div class="mb-4">
-                        <label for="{{ form.password.id }}" class="form-label">Password</label>
-                        {{ form.password(class="form-control", placeholder="Enter your password") }}
-                        {% for error in form.password.errors %}
-                            <div class="text-danger small mt-1">{{ error }}</div>
-                        {% endfor %}
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
                     </div>
-                    
-                    <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
                 </form>
-            </div>
-            <div class="card-footer bg-light text-center py-3">
-                <p class="text-muted mb-0">Enter your credentials to access your data</p>
             </div>
         </div>
     </div>

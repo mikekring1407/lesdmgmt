@@ -1,0 +1,11 @@
+first_name,last_name,email,phone,city,state,status,bank,date,source,notes,priority
+John,Doe,john.doe@example.com,555-123-4567,New York,NY,New,Chase,2025-04-10,Website,Interested in mortgage,High
+Jane,Smith,jane.smith@example.com,555-234-5678,Los Angeles,CA,Contacted,Bank of America,2025-04-11,Referral,Follow up next week,Medium
+Michael,Johnson,michael.johnson@example.com,555-345-6789,Chicago,IL,Qualified,Wells Fargo,2025-04-12,Advertisement,Pre-approved for loan,High
+Emily,Williams,emily.williams@example.com,555-456-7890,Houston,TX,Closed,Citibank,2025-04-13,Social Media,Completed application,Low
+Robert,Brown,robert.brown@example.com,555-567-8901,Phoenix,AZ,New,US Bank,2025-04-14,Website,Requested information,Medium
+Sarah,Garcia,sarah.garcia@example.com,555-678-9012,Philadelphia,PA,Contacted,PNC Bank,2025-04-15,Referral,Called twice,High
+David,Miller,david.miller@example.com,555-789-0123,San Antonio,TX,New,Truist,2025-04-16,Website,Submitted inquiry form,Medium
+Jessica,Davis,jessica.davis@example.com,555-890-1234,San Diego,CA,Qualified,Capital One,2025-04-17,Advertisement,Needs follow up,High
+James,Rodriguez,james.rodriguez@example.com,555-901-2345,Dallas,TX,New,TD Bank,2025-04-18,Social Media,First time homebuyer,Medium
+Lisa,Martinez,lisa.martinez@example.com,555-012-3456,San Jose,CA,Contacted,BMO Harris,2025-04-19,Website,Looking for refinancing,High

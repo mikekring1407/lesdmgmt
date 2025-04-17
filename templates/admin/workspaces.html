@@ -1,0 +1,177 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1>Workspace Management</h1>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.create_workspace') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Workspace
+        </a>
+    </div>
+</div>
+
+{% if creating or edit_workspace %}
+<!-- Create/Edit Workspace Form -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{% if edit_workspace %}Edit{% else %}Create{% endif %} Workspace</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% if edit_workspace %}{{ url_for('admin.edit_workspace', workspace_id=edit_workspace.id) }}{% else %}{{ url_for('admin.create_workspace') }}{% endif %}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Workspace Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{% if edit_workspace %}{{ edit_workspace.name }}{% endif %}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">All Headers</label>
+                        <div class="form-text mb-2">Manage all headers for this workspace. Both standard and custom fields can be edited.</div>
+                        
+                        <!-- Display all workspace headers with the ability to edit them -->
+                        <div id="headerContainer">
+                            {% if edit_workspace %}
+                                {% for header in workspace_headers %}
+                                <div class="input-group mb-2 header-row">
+                                    <input type="text" class="form-control" name="headers[]" value="{{ header }}" required>
+                                    <button type="button" class="btn btn-danger remove-header">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                {% for field in ['first_name', 'last_name', 'email', 'phone', 'city', 'state', 'status', 'bank', 'date'] %}
+                                <div class="input-group mb-2 header-row">
+                                    <input type="text" class="form-control" name="headers[]" value="{{ field }}" required>
+                                    <button type="button" class="btn btn-danger remove-header">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <button type="button" class="btn btn-success mt-2" id="addHeaderBtn">
+                            <i class="fas fa-plus"></i> Add Header
+                        </button>
+                    </div>
+                    
+
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            {% if edit_workspace %}Update{% else %}Create{% endif %} Workspace
+                        </button>
+                        <a href="{{ url_for('admin.workspaces') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Workspace List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Workspaces</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped" id="workspacesTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Created By</th>
+                    <th>Created Date</th>
+                    <th>Custom Headers</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for workspace in workspaces %}
+                <tr>
+                    <td>{{ workspace.id }}</td>
+                    <td>{{ workspace.name }}</td>
+                    <td>{{ workspace.creator.username }}</td>
+                    <td>{{ workspace.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% set custom_count = namespace(value=0) %}
+                        {% for header in workspace.custom_headers %}
+                            {% if not header.is_default %}
+                                {% set custom_count.value = custom_count.value + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ custom_count.value }} custom fields
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.edit_workspace', workspace_id=workspace.id) }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteWorkspaceModal{{ workspace.id }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- Delete Workspace Modal -->
+                <div class="modal fade" id="deleteWorkspaceModal{{ workspace.id }}" tabindex="-1" aria-labelledby="deleteWorkspaceModalLabel{{ workspace.id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteWorkspaceModalLabel{{ workspace.id }}">Confirm Delete</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                Are you sure you want to delete the workspace <strong>{{ workspace.name }}</strong>?
+                                <p class="text-danger mt-2">
+                                    Warning: This will delete all associated leads and cannot be undone.
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <form method="post" action="{{ url_for('admin.delete_workspace', workspace_id=workspace.id) }}">
+                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#workspacesTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100]
+        });
+
+        // Add header field
+        $('#addHeaderBtn').click(function() {
+            const headerRow = `
+                <div class="input-group mb-2 header-row">
+                    <input type="text" class="form-control" name="headers[]" placeholder="New header name" required>
+                    <button type="button" class="btn btn-danger remove-header">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            $('#headerContainer').append(headerRow);
+        });
+
+        // Remove header field
+        $(document).on('click', '.remove-header', function() {
+            $(this).closest('.header-row').remove();
+        });
+    });
+</script>
+{% endblock %}

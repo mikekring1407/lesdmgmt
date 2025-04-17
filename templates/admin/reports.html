@@ -1,0 +1,291 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Lead Reports & Analytics</h1>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Filter Reports</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{{ url_for('admin.reports') }}">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="workspace_id" class="form-label">Workspace</label>
+                    <select class="form-select" id="workspace_id" name="workspace_id">
+                        <option value="">All Workspaces</option>
+                        {% for workspace in workspaces %}
+                        <option value="{{ workspace.id }}" {% if selected_workspace == workspace.id %}selected{% endif %}>
+                            {{ workspace.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="start_date" class="form-label">Start Date (MM/DD/YYYY)</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ selected_start_date }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="end_date" class="form-label">End Date (MM/DD/YYYY)</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ selected_end_date }}">
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="{{ url_for('admin.reports') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Top Stats -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ stats.total }}</h3>
+                <p class="mb-0">Total Leads</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3>{{ stats.assigned }}</h3>
+                <p class="mb-0">Assigned Leads</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3>{{ stats.unassigned }}</h3>
+                <p class="mb-0">Unassigned Leads</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status & Workspace Distribution -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Lead Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Lead Distribution by Workspace</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="workspaceChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Distribution -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Leads Assigned per User</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="userChart" width="800" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Details -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Status Breakdown</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for status, count in stats.status_breakdown.items() %}
+                    <tr>
+                        <td>{{ status }}</td>
+                        <td>{{ count }}</td>
+                        <td>{{ "%.1f"|format(count / stats.total * 100 if stats.total > 0 else 0) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- User Assignment Details -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">User Assignment Breakdown</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Assigned Leads</th>
+                        <th>Percentage of Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user, count in stats.user_breakdown.items() %}
+                    <tr>
+                        <td>{{ user }}</td>
+                        <td>{{ count }}</td>
+                        <td>{{ "%.1f"|format(count / stats.total * 100 if stats.total > 0 else 0) }}%</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td><strong>Unassigned</strong></td>
+                        <td>{{ stats.unassigned }}</td>
+                        <td>{{ "%.1f"|format(stats.unassigned / stats.total * 100 if stats.total > 0 else 0) }}%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: [
+                {% for status, count in stats.status_breakdown.items() %}
+                '{{ status }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Leads by Status',
+                data: [
+                    {% for status, count in stats.status_breakdown.items() %}
+                    {{ count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(199, 199, 199, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    {% if stats.workspace_breakdown %}
+    // Workspace Chart
+    const workspaceCtx = document.getElementById('workspaceChart').getContext('2d');
+    const workspaceChart = new Chart(workspaceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for workspace, count in stats.workspace_breakdown.items() %}
+                '{{ workspace }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Leads by Workspace',
+                data: [
+                    {% for workspace, count in stats.workspace_breakdown.items() %}
+                    {{ count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // User Chart
+    const userCtx = document.getElementById('userChart').getContext('2d');
+    const userChart = new Chart(userCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for user, count in stats.user_breakdown.items() %}
+                '{{ user }}',
+                {% endfor %}
+                'Unassigned',
+            ],
+            datasets: [{
+                label: 'Leads Assigned',
+                data: [
+                    {% for user, count in stats.user_breakdown.items() %}
+                    {{ count }},
+                    {% endfor %}
+                    {{ stats.unassigned }},
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

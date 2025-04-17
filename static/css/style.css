@@ -1,0 +1,81 @@
+/* Additional custom styles beyond Bootstrap */
+
+/* Main Layout */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Custom Card Styling */
+.card {
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    font-weight: 500;
+}
+
+/* DataTables Customization */
+.dataTables_wrapper .dataTables_length, 
+.dataTables_wrapper .dataTables_filter, 
+.dataTables_wrapper .dataTables_info, 
+.dataTables_wrapper .dataTables_paginate {
+    margin-bottom: 1rem;
+}
+
+/* For better dashboard stats visibility */
+.card-body h2 {
+    font-size: 2.5rem;
+    font-weight: 600;
+}
+
+/* Form elements */
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Custom Badge Styling */
+.badge {
+    font-size: 0.85em;
+    padding: 0.35em 0.65em;
+}
+
+/* Lead Table Styling */
+#leadsTable_wrapper .row:first-child {
+    margin-bottom: 1rem;
+}
+
+/* Lead Actions Button Spacing */
+.btn-sm {
+    margin-right: 0.25rem;
+}
+
+/* Checkbox Styling */
+input[type="checkbox"] {
+    cursor: pointer;
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+/* Workspace Headers Container */
+#customHeadersContainer {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Better spacing for modals */
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* Make charts responsive */
+canvas {
+    max-width: 100%;
+}

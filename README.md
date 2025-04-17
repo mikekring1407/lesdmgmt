@@ -1,115 +1,65 @@
-# Next US Lead Management System
+# NEXTUS Lead Management System
 
-A secure web application for displaying and managing leads from a PostgreSQL database with user-specific access controls.
+A powerful lead management system built with Flask that allows admins to manage leads, workspaces, and users.
 
 ## Features
 
-- User authentication with role-based access control
-- Admin dashboard for user management
+- Role-based access control (Admin and User roles)
+- CSV import/export with custom headers per workspace
 - Lead assignment and management
-- Custom field creation and management
-- CSV import and export capabilities
-- Google Sheets integration (optional)
-- Comprehensive filtering and search
-- Mobile-responsive interface
+- User management
+- Comprehensive reporting
+- Responsive design
 
-## Tech Stack
+## Deployment on Render
 
-- **Backend**: Flask
-- **Database**: PostgreSQL
-- **Authentication**: Flask-Login
-- **Forms**: Flask-WTF
-- **ORM**: SQLAlchemy
-- **Frontend**: Bootstrap, DataTables.js
-- **External APIs**: Google Sheets (optional)
+This application is configured for easy deployment on Render.com:
 
-## Setup and Installation
+1. Sign up for a [Render account](https://render.com)
+2. Click on "New" and select "Blueprint" from the dropdown
+3. Connect your GitHub/GitLab repository
+4. Render will automatically detect the render.yaml configuration
+5. Click "Apply" to deploy the application
 
-### Local Development
+### What Gets Deployed
+
+- **Web Service**: The Flask application with Gunicorn as the WSGI server
+- **PostgreSQL Database**: A dedicated database for the application
+
+### Environment Variables
+
+The following environment variables are configured automatically:
+
+- `DATABASE_URL`: Connection string for the PostgreSQL database
+- `SESSION_SECRET`: Randomly generated secret key for JWT and sessions
+- `PYTHONUNBUFFERED`: Set to true for proper logging
+
+## Initial Setup After Deployment
+
+After the first deployment, you need to set up an admin user:
+
+1. Access the Render shell for your web service
+2. Run the following command to create an admin user:
+
+```
+python create_admin.py --username admin --email admin@example.com --password secure_password
+```
+
+3. Run the following command to create a default workspace:
+
+```
+python create_workspace.py
+```
+
+4. Log in with the admin credentials
+
+## Local Development
 
 1. Clone the repository
-2. Install the required dependencies
-3. Set up environment variables (see `.env.sample`)
-4. Run database migrations:
-   ```
-   python migrations.py
-   ```
-5. Run the application:
-   ```
-   gunicorn --bind 0.0.0.0:5000 main:app
-   ```
+2. Copy `.env.example` to `.env` and update the variables
+3. Install dependencies: `pip install -r render-requirements.txt`
+4. Run the application: `gunicorn main:app --bind 0.0.0.0:5000`
 
-### Production Deployment
+## Support
 
-For detailed deployment instructions, see the [Deployment Guide](DEPLOYMENT_GUIDE.md).
-
-### Database Migrations
-
-When updating an existing installation, run the migrations script to add the new fields:
-
-```
-python migrations.py
-```
-
-This will add the following fields to the lead table:
-- first_name
-- last_name
-- city
-- state
-- zipcode
-- bank_name
-- date_captured
-- time_captured
-- workspace_id (with foreign key constraint)
-
-## Environment Variables
-
-- `DATABASE_URL`: PostgreSQL connection string
-- `SESSION_SECRET`: Secret key for session management
-- `GOOGLE_CREDENTIALS`: (Optional) Google API credentials
-- `SPREADSHEET_ID`: (Optional) ID of Google Spreadsheet for imports
-
-## Project Structure
-
-- `/app.py`: Main application file
-- `/models.py`: Database models
-- `/forms.py`: Form definitions
-- `/utils.py`: Utility functions
-- `/templates/`: HTML templates
-- `/static/`: Static assets (CSS, JS, images)
-- `/instance/`: Instance-specific data (database files)
-
-## Usage
-
-### Default Admin Credentials
-
-Username: `admin`  
-Password: `admin`
-
-**Important**: Change these credentials immediately after the first login.
-
-### User Management
-
-1. Log in as admin
-2. Navigate to Admin Dashboard > Users
-3. Create or manage users
-
-### Lead Management
-
-1. Import leads via CSV or Google Sheets
-2. Assign leads to users
-3. Filter and export lead data
-
-## Custom Fields
-
-The system supports custom fields for leads:
-- Text fields
-- Number fields
-- Date fields
-- Dropdown/select fields
-- Checkboxes
-- Text areas
-
-## License
-
-[MIT License](LICENSE)
+For any issues or questions, please contact support@nextus.com
