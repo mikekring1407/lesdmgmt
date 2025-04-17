@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r render-requirements.txt
-    postDeployCommand: python create_admin.py --username admin --email admin@example.com --password changeme123 && python create_workspace.py
+    # No post-deploy command to create admin - we'll use the setup route instead
     startCommand: gunicorn main:app --bind 0.0.0.0:5000
     envVars:
       - key: DATABASE_URL
@@ -17,6 +17,10 @@ services:
         generateValue: true
       - key: PYTHONUNBUFFERED
         value: true
+    # Show a helpful message after deployment with the setup URL
+    healthCheckPath: /
+    domains:
+      - nextus.onrender.com
 
 databases:
   - name: lead-management-db

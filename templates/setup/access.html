@@ -1,0 +1,42 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Setup Access Required</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Setup access requires a valid setup key.
+                    </div>
+                    
+                    <p>To access the setup page, you need to provide a valid setup key in the URL parameter.</p>
+                    
+                    <div class="mb-3">
+                        <label for="setupKey" class="form-label">Setup Key</label>
+                        <input type="text" class="form-control" id="setupKey" placeholder="Enter setup key">
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" onclick="accessSetup()">Access Setup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function accessSetup() {
+        const key = document.getElementById('setupKey').value.trim();
+        if (key) {
+            window.location.href = `/setup?key=${encodeURIComponent(key)}`;
+        } else {
+            alert('Please enter a setup key');
+        }
+    }
+</script>
+{% endblock %}

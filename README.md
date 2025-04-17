@@ -38,9 +38,21 @@ The following environment variables are configured automatically:
 
 After the first deployment, you need to set up an admin user. You have two options:
 
-### Option 1: Using the Setup Route (Recommended)
+### Option 1: Using the Web Setup Interface (Recommended)
 
 1. Access your deployed application with the setup route:
+   ```
+   https://your-app-url.render.com/setup?key=SETUP_KEY
+   ```
+   Replace `SETUP_KEY` with the value of the SETUP_KEY environment variable in your Render dashboard.
+
+2. Fill out the setup form to create your admin account and default workspace.
+
+3. After completing setup, you'll receive your credentials which you can use to log in.
+
+### Option 2: Using the API Setup Route
+
+1. Access your deployed application with the API setup route:
    ```
    https://your-app-url.render.com/create-admin?key=SETUP_KEY
    ```
@@ -48,9 +60,9 @@ After the first deployment, you need to set up an admin user. You have two optio
 
 2. You'll receive a JSON response with the admin username and password.
 
-3. Log in with these credentials (default: username: `admin`, password: `Admin@123`).
+3. Log in with these credentials (default: username: `admin`, password is system-generated).
 
-### Option 2: Using the Render Shell
+### Option 3: Using the Render Shell
 
 If you have shell access:
 

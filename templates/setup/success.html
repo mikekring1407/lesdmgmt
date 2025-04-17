@@ -1,0 +1,51 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Setup Completed Successfully</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Your Lead Management System has been configured successfully!
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Setup Summary:</h5>
+                        <ul class="list-group list-group-flush mb-3">
+                            {% if admin_created %}
+                            <li class="list-group-item bg-light">
+                                <i class="fas fa-user-shield text-success me-2"></i> Admin user created
+                            </li>
+                            {% endif %}
+                            
+                            {% if workspace_created %}
+                            <li class="list-group-item bg-light">
+                                <i class="fas fa-briefcase text-success me-2"></i> Default workspace created
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">Your Login Credentials</h5>
+                        <p><strong>Username:</strong> {{ username }}</p>
+                        <p><strong>Password:</strong> {{ password }}</p>
+                        <hr>
+                        <p class="mb-0">Please save these credentials in a secure location. You will need them to log in.</p>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i> Go to Login Page
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

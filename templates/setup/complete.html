@@ -1,0 +1,30 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">Setup Already Completed</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> The system has already been configured.
+                    </div>
+                    
+                    <p>Your Lead Management System has already been set up with admin users and workspaces.</p>
+                    
+                    <p>If you need to reset your password, please contact an existing administrator.</p>
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i> Go to Login Page
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
