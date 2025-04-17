@@ -36,20 +36,34 @@ The following environment variables are configured automatically:
 
 ## Initial Setup After Deployment
 
-After the first deployment, you need to set up an admin user:
+After the first deployment, you need to set up an admin user. You have two options:
+
+### Option 1: Using the Setup Route (Recommended)
+
+1. Access your deployed application with the setup route:
+   ```
+   https://your-app-url.render.com/create-admin?key=SETUP_KEY
+   ```
+   Replace `SETUP_KEY` with the value of the SETUP_KEY environment variable in your Render dashboard.
+
+2. You'll receive a JSON response with the admin username and password.
+
+3. Log in with these credentials (default: username: `admin`, password: `Admin@123`).
+
+### Option 2: Using the Render Shell
+
+If you have shell access:
 
 1. Access the Render shell for your web service
 2. Run the following command to create an admin user:
-
-```
-python create_admin.py --username admin --email admin@example.com --password secure_password
-```
+   ```
+   python create_admin.py --username admin --email admin@example.com --password secure_password
+   ```
 
 3. Run the following command to create a default workspace:
-
-```
-python create_workspace.py
-```
+   ```
+   python create_workspace.py
+   ```
 
 4. Log in with the admin credentials
 

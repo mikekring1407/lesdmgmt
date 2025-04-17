@@ -43,7 +43,9 @@ with app.app_context():
 from routes.admin import admin_bp
 from routes.user import user_bp
 from routes.auth import auth_bp
+from routes.setup import setup_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(setup_bp)
