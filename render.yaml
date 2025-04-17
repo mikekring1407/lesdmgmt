@@ -18,9 +18,7 @@ services:
       - key: PYTHONUNBUFFERED
         value: true
     # Show a helpful message after deployment with the setup URL
-    healthCheckPath: /
-    domains:
-      - nextus.onrender.com
+    healthCheckPath: /        
 
 databases:
   - name: lead-management-db
